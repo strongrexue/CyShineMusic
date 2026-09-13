@@ -6,23 +6,21 @@ import 'package:cy_shine_music/features/songs/widgets/songs_placeholders.dart';
 import 'package:cy_shine_music/features/songs/widgets/songs_sort_sheet.dart';
 
 void main() {
-  testWidgets('songs summary exposes icon-only sort and batch actions', (
+  testWidgets('songs local actions expose play-all, sort and batch', (
     tester,
   ) async {
     _useNarrowPhone(tester);
+    var playPressed = false;
     var sortPressed = false;
     var batchPressed = false;
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SongsListSummary(
+          body: SongsLocalActions(
             count: 12,
-            totalCount: 12,
-            searching: false,
-            sortMode: SongSortMode.title,
-            ascending: true,
             batchMode: false,
+            onPlayAll: () => playPressed = true,
             onOpenSort: () => sortPressed = true,
             onToggleBatch: () => batchPressed = true,
           ),
@@ -30,10 +28,9 @@ void main() {
       ),
     );
 
-    expect(find.text('12 首本地歌曲'), findsOneWidget);
-    expect(find.byTooltip('排序：标题（升序）'), findsOneWidget);
+    expect(find.text('播放全部 (12)'), findsOneWidget);
+    expect(find.text('默认排序'), findsOneWidget);
     expect(find.byTooltip('批量操作'), findsOneWidget);
-    expect(find.text('标题 · 升序'), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('songs-sort-button')),
@@ -42,8 +39,10 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.tap(find.byKey(const ValueKey('songs-play-all-button')));
     await tester.tap(find.byKey(const ValueKey('songs-sort-button')));
     await tester.tap(find.byKey(const ValueKey('songs-batch-button')));
+    expect(playPressed, isTrue);
     expect(sortPressed, isTrue);
     expect(batchPressed, isTrue);
   });

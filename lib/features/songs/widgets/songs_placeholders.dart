@@ -1,33 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/ui/expressive_loading_status.dart';
-import '../songs_toolbar_state.dart';
 
-class SongsListSummary extends StatelessWidget {
-  const SongsListSummary({
+/// 本地音乐 Tab 的操作栏：播放全部胶囊 + 默认排序边框胶囊 + 批量操作图标。
+class SongsLocalActions extends StatelessWidget {
+  const SongsLocalActions({
     super.key,
     required this.count,
-    required this.totalCount,
-    required this.searching,
-    required this.sortMode,
-    required this.ascending,
     required this.batchMode,
+    required this.onPlayAll,
     required this.onOpenSort,
     required this.onToggleBatch,
-    this.showSort = true,
-    this.collectionLabel = '本地歌曲',
   });
 
   final int count;
-  final int totalCount;
-  final bool searching;
-  final SongSortMode sortMode;
-  final bool ascending;
   final bool batchMode;
+  final VoidCallback? onPlayAll;
   final VoidCallback onOpenSort;
   final VoidCallback? onToggleBatch;
-  final bool showSort;
-  final String collectionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -36,26 +26,42 @@ class SongsListSummary extends StatelessWidget {
       height: 52,
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              searching ? '找到 $count 首歌曲' : '$totalCount 首$collectionLabel',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+          FilledButton.icon(
+            key: const ValueKey('songs-play-all-button'),
+            onPressed: count == 0 ? null : onPlayAll,
+            icon: const Icon(Icons.play_arrow_rounded, size: 20),
+            label: Text('播放全部 ($count)'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              minimumSize: const Size(0, 40),
+              shape: const StadiumBorder(),
+              textStyle: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          if (showSort)
-            _SummaryIconButton(
-              key: const ValueKey('songs-sort-button'),
-              tooltip: '排序：${sortMode.label}（${ascending ? '升序' : '降序'}）',
-              onPressed: onOpenSort,
-              icon: const Icon(Icons.sort_rounded, size: 21),
+          const Spacer(),
+          OutlinedButton.icon(
+            key: const ValueKey('songs-sort-button'),
+            onPressed: onOpenSort,
+            icon: const Icon(Icons.sort_rounded, size: 18),
+            label: const Text('默认排序'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: scheme.onSurface,
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: const StadiumBorder(),
+              side: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.56),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          _SummaryIconButton(
+          ),
+          _ActionIconButton(
             key: const ValueKey('songs-batch-button'),
             tooltip: batchMode ? '退出批量操作' : '批量操作',
             onPressed: onToggleBatch,
@@ -68,8 +74,8 @@ class SongsListSummary extends StatelessWidget {
   }
 }
 
-class _SummaryIconButton extends StatelessWidget {
-  const _SummaryIconButton({
+class _ActionIconButton extends StatelessWidget {
+  const _ActionIconButton({
     super.key,
     required this.tooltip,
     required this.icon,
@@ -193,10 +199,9 @@ class SongsLoading extends StatelessWidget {
 }
 
 class EmptySongs extends StatelessWidget {
-  const EmptySongs({super.key, this.error, this.playlistMode = false});
+  const EmptySongs({super.key, this.error});
 
   final String? error;
-  final bool playlistMode;
 
   @override
   Widget build(BuildContext context) {
@@ -228,8 +233,6 @@ class EmptySongs extends StatelessWidget {
                 child: Icon(
                   hasError
                       ? Icons.sync_problem_rounded
-                      : playlistMode
-                      ? Icons.queue_music_rounded
                       : Icons.library_music_outlined,
                   size: 40,
                   color: contentColor,
@@ -237,11 +240,7 @@ class EmptySongs extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                hasError
-                    ? '暂时无法读取歌曲'
-                    : playlistMode
-                    ? '歌单还是空的'
-                    : '还没有本地歌曲',
+                hasError ? '暂时无法读取歌曲' : '还没有本地歌曲',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: scheme.onSurface,
@@ -252,11 +251,7 @@ class EmptySongs extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               Text(
-                hasError
-                    ? normalizedError
-                    : playlistMode
-                    ? '添加歌曲后，会按歌单中的顺序显示在这里。'
-                    : '本地音乐文件夹里的歌曲会自动出现在这里，也可以下拉重新扫描。',
+                hasError ? normalizedError : '本地音乐文件夹里的歌曲会自动出现在这里，也可以下拉重新扫描。',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: scheme.onSurfaceVariant,
@@ -265,38 +260,165 @@ class EmptySongs extends StatelessWidget {
                   height: 1.5,
                 ),
               ),
-              if (!playlistMode) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.swipe_down_alt_rounded,
-                        size: 17,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        hasError ? '下拉重试' : '下拉重新扫描',
-                        style: TextStyle(
-                          color: scheme.onSurfaceVariant,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 8,
                 ),
-              ],
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.swipe_down_alt_rounded,
+                      size: 17,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      hasError ? '下拉重试' : '下拉重新扫描',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EmptyLikedSongs extends StatelessWidget {
+  const EmptyLikedSongs({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 108),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 330),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Icon(
+                  Icons.favorite_border_rounded,
+                  size: 40,
+                  color: scheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '还没有喜欢的歌曲',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  letterSpacing: -0.15,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                '在歌曲列表点击右侧 ❤️ 即可收藏到这里',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EmptyPlaylists extends StatelessWidget {
+  const EmptyPlaylists({super.key, required this.onManage});
+
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 108),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 330),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Icon(
+                  Icons.queue_music_rounded,
+                  size: 40,
+                  color: scheme.onSecondaryContainer,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '还没有歌单',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  letterSpacing: -0.15,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                '新建或导入歌单后会显示在这里',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.tonalIcon(
+                onPressed: onManage,
+                icon: const Icon(Icons.library_music_rounded, size: 19),
+                label: const Text('去歌单管理'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  shape: const StadiumBorder(),
+                ),
+              ),
             ],
           ),
         ),

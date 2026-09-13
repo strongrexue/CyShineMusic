@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../theme/app_motion.dart';
 import '../../songs/songs_toolbar_state.dart';
 import '../shell_route_utils.dart';
-import 'library_view_menu.dart';
 
 class ShellHeader extends ConsumerWidget {
   const ShellHeader({
@@ -30,11 +29,7 @@ class ShellHeader extends ConsumerWidget {
         location == '/discover' ||
         isSongsLibraryLocation(location) ||
         onlineCollectionDetail;
-    final headerTitle =
-        location == '/songs/search' &&
-            ref.watch(songsLibraryPlaylistIdProvider) != null
-        ? '搜索歌单歌曲'
-        : _titleFor(location);
+    final headerTitle = _titleFor(location);
 
     if (location == '/songs') {
       final songsToolbar = ref.watch(songsToolbarStateProvider);
@@ -44,27 +39,31 @@ class ShellHeader extends ConsumerWidget {
       );
     }
 
+    final showHomeBack = location == '/settings';
+
     return ShellSectionHeader(
       title: headerTitle,
       compact: compact,
       fontSize: onlineCollectionDetail ? 18 : (compact ? 22 : null),
-      leading: location == '/playlists/import'
-          ? IconButton(
-              tooltip: '返回上一页',
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(playlistBackLocation);
-                }
-              },
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: scheme.onSurface,
-                size: 21,
-              ),
-            )
-          : null,
+      leading: showHomeBack
+          ? const HomeBackButton()
+          : (location == '/playlists/import'
+              ? IconButton(
+                  tooltip: '返回上一页',
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go(playlistBackLocation);
+                    }
+                  },
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: scheme.onSurface,
+                    size: 21,
+                  ),
+                )
+              : null),
     );
   }
 
@@ -170,78 +169,56 @@ class SongsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = Text(
-      state.libraryTitle,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-        color: scheme.onSurface,
-        fontSize: 22,
-        fontWeight: FontWeight.w600,
-        height: 1.05,
-      ),
-    );
-
     if (state.batchMode) {
-      return Column(
+      return Container(
         key: const ValueKey('songs-header-batch'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: 44,
-            child: Align(alignment: Alignment.centerLeft, child: title),
+        height: 44,
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: scheme.outlineVariant.withValues(alpha: 0.34),
+            ),
+            bottom: BorderSide(
+              color: scheme.outlineVariant.withValues(alpha: 0.34),
+            ),
           ),
-          Container(
-            key: const ValueKey('songs-batch-header'),
-            height: 44,
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: 0.34),
-                ),
-                bottom: BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: 0.34),
+        ),
+        child: Row(
+          children: [
+            TextButton(
+              onPressed: state.hasSongs ? state.onToggleSelectAll : null,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(72, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                alignment: Alignment.centerLeft,
+              ),
+              child: Text(state.allSelected ? '取消全选' : '全选'),
+            ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: AppMotion.short,
+                child: Text(
+                  '已选中 ${state.selectedCount} 项',
+                  key: ValueKey(state.selectedCount),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: scheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
-            child: Row(
-              children: [
-                TextButton(
-                  onPressed: state.hasSongs ? state.onToggleSelectAll : null,
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(72, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    alignment: Alignment.centerLeft,
-                  ),
-                  child: Text(state.allSelected ? '取消全选' : '全选'),
-                ),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: AppMotion.short,
-                    child: Text(
-                      '已选中 ${state.selectedCount} 项',
-                      key: ValueKey(state.selectedCount),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: scheme.onSurface,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox.square(
-                  dimension: 44,
-                  child: IconButton(
-                    tooltip: '退出批量管理',
-                    onPressed: state.onToggleBatch,
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                  ),
-                ),
-              ],
+            SizedBox.square(
+              dimension: 44,
+              child: IconButton(
+                tooltip: '退出批量管理',
+                onPressed: state.onToggleBatch,
+                icon: const Icon(Icons.close_rounded, size: 20),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
@@ -250,64 +227,25 @@ class SongsHeader extends StatelessWidget {
       height: 44,
       child: Row(
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: LibraryViewMenu(
-                    title: state.libraryTitle,
-                    activePlaylistId: state.activePlaylistId,
-                    scheme: scheme,
-                    onSelected: state.onSelectLibraryPlaylist ?? (_) {},
-                  ),
-                ),
-                const SizedBox(width: 4),
-                _SongsHeaderIconButton(
-                  tooltip: '歌单',
-                  icon: Icons.queue_music_rounded,
-                  onPressed: state.onOpenPlaylists,
-                ),
-                _SongsHeaderIconButton(
-                  tooltip: '随机播放',
-                  icon: Icons.shuffle_rounded,
-                  onPressed: state.hasSongs ? state.onShuffle : null,
-                ),
-              ],
+          const HomeBackButton(),
+          Text(
+            '收藏',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: scheme.onSurface,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              height: 1.05,
             ),
           ),
+          const Spacer(),
           _LibraryOverflowMenu(
             onOpenHistory: state.onOpenHistory,
             searchLabel: state.searchLabel,
             onSearch: state.onSearch,
-            onUpdatePlaylist: state.onUpdatePlaylist,
-            updatingPlaylist: state.updatingPlaylist,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SongsHeaderIconButton extends StatelessWidget {
-  const _SongsHeaderIconButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: 44,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        icon: Icon(icon, size: 20),
-        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -318,15 +256,11 @@ class _LibraryOverflowMenu extends StatelessWidget {
     this.onOpenHistory,
     this.searchLabel = '搜索本地歌曲',
     this.onSearch,
-    this.onUpdatePlaylist,
-    this.updatingPlaylist = false,
   });
 
   final VoidCallback? onOpenHistory;
   final String searchLabel;
   final VoidCallback? onSearch;
-  final VoidCallback? onUpdatePlaylist;
-  final bool updatingPlaylist;
 
   @override
   Widget build(BuildContext context) {
@@ -356,17 +290,6 @@ class _LibraryOverflowMenu extends StatelessWidget {
                 },
           child: Text(searchLabel),
         ),
-        if (onUpdatePlaylist != null)
-          MenuItemButton(
-            leadingIcon: updatingPlaylist
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.2),
-                  )
-                : const Icon(Icons.refresh_rounded, size: 20),
-            onPressed: updatingPlaylist ? null : onUpdatePlaylist,
-            child: Text(updatingPlaylist ? '正在更新' : '更新歌单'),
-          ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.queue_music_rounded, size: 20),
           onPressed: () => context.go('/playlists'),
@@ -392,6 +315,30 @@ class _LibraryOverflowMenu extends StatelessWidget {
           icon: const Icon(Icons.more_vert_rounded, size: 21),
           visualDensity: VisualDensity.compact,
         ),
+      ),
+    );
+  }
+}
+
+/// 返回首页箭头：统一用于发现/收藏/设置等顶层 Tab 页面的左上角。
+/// 点击直接跳转到首页路由 `/`，不使用系统返回栈。
+class HomeBackButton extends StatelessWidget {
+  const HomeBackButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox.square(
+      dimension: 44,
+      child: IconButton(
+        tooltip: '返回首页',
+        onPressed: () => context.go('/'),
+        icon: Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: scheme.onSurface,
+          size: 21,
+        ),
+        visualDensity: VisualDensity.compact,
       ),
     );
   }

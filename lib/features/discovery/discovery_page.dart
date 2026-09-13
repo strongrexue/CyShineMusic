@@ -12,7 +12,12 @@ class DiscoveryPage extends StatelessWidget {
       backgroundColor: Colors.transparent,
       body: Column(
         children: [
-          const ShellSectionHeader(title: '发现', compact: true, fontSize: 22),
+          const ShellSectionHeader(
+            title: '发现',
+            compact: true,
+            fontSize: 22,
+            leading: HomeBackButton(),
+          ),
           const Expanded(child: DiscoveryContent()),
         ],
       ),
