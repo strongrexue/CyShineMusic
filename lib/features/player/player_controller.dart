@@ -229,7 +229,7 @@ class PlayerController extends StateNotifier<PlayerState>
       );
     } else {
       state = state.beginTrackLoading(
-        nextTrack: restoredTrack,
+        nextTrack: restoredTrack ?? transitionTrack,
         canPlayPrevious: _canPlayPrevious,
         canPlayNext: _canPlayNext,
         queue: List<DownloadHistoryEntry>.unmodifiable(_queue),
