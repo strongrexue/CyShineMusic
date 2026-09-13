@@ -135,6 +135,14 @@ class SearchController extends Notifier<SearchState> {
     return SearchState(source: _defaultSearchSource());
   }
 
+  /// 仅切换当前音源高亮，不触发搜索。用于首页"按源缓存命中时直接展示"的场景。
+  void selectSource(MusicSource source) {
+    final enabled = ref.read(settingsProvider).enabledSearchSources;
+    if (source != MusicSource.all && !enabled.contains(source)) return;
+    if (source == state.source) return;
+    state = state.copyWith(source: source);
+  }
+
   void setSource(MusicSource source) {
     final enabled = ref.read(settingsProvider).enabledSearchSources;
     if (source != MusicSource.all && !enabled.contains(source)) return;

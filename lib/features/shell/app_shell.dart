@@ -670,13 +670,6 @@ class _AppShellState extends ConsumerState<AppShell>
                       SearchPagingFabLayer(),
                     ],
                   ),
-                )
-              else if (widget.location == '/')
-                // 首页仅在完整搜索视图中有结果时显示翻页悬浮按钮
-                // （SearchPagingFabLayer 依据 searchToolbarState 自管显隐）。
-                Positioned.fill(
-                  key: ValueKey('shell-home-fab'),
-                  child: const SearchPagingFabLayer(),
                 ),
             ],
           ),

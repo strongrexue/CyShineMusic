@@ -45,11 +45,19 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
   Iterable<Widget> _lastSuggestionWidgets = const <Widget>[];
   AppToastHandle? _searchErrorToast;
 
+  /// 按音源独立维护的分页累加状态（无限滚动）。
+  final Map<MusicSource, _SourcePageState> _sourceStates =
+      <MusicSource, _SourcePageState>{};
+
+  _SourcePageState _stateFor(MusicSource source) =>
+      _sourceStates.putIfAbsent(source, _SourcePageState.new);
+
   @override
   void initState() {
     super.initState();
     _controller = material.SearchController();
     _resultsScrollController = ScrollController();
+    _resultsScrollController.addListener(_onResultsScroll);
     _controller.text = ref.read(searchControllerProvider).keyword;
     // 进入搜索视图即聚焦输入：打开 SearchAnchor 建议层并唤起键盘。
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -64,6 +72,7 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
   void dispose() {
     _tipRequest = null;
     _dismissSearchErrorToast();
+    _resultsScrollController.removeListener(_onResultsScroll);
     _controller.dispose();
     _resultsScrollController.dispose();
     super.dispose();
@@ -121,11 +130,7 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
     }
   }
 
-  Future<void> _runSearch({
-    String? keyword,
-    int page = 1,
-    bool scrollToTopOnSuccess = false,
-  }) async {
+  Future<void> _runSearch({String? keyword}) async {
     DebugPaintGuard.disableNow();
     final query = (keyword ?? _controller.text).trim();
     if (query.isEmpty) {
@@ -140,24 +145,22 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
     _dismissTransientRoutes();
     _releaseSearchFocus();
 
+    // 关键词变化：清空所有音源的累加缓存，重新从第 1 页开始。
+    for (final state in _sourceStates.values) {
+      state
+        ..page = 1
+        ..results.clear()
+        ..hasMore = true
+        ..isLoadingMore = false;
+    }
+
     final requestedSource = _sourceForSearchRequest(
       ref.read(searchControllerProvider),
     );
     await ref
         .read(searchControllerProvider.notifier)
-        .search(keyword: query, source: requestedSource, page: page);
-    if (!scrollToTopOnSuccess || !mounted) return;
-
-    final completedState = ref.read(searchControllerProvider);
-    final response = completedState.response;
-    final requestStillMatches =
-        !completedState.loading &&
-        completedState.error == null &&
-        completedState.keyword == query &&
-        completedState.source == requestedSource &&
-        completedState.page == page &&
-        response?.page == page;
-    if (!requestStillMatches) return;
+        .search(keyword: query, source: requestedSource, page: 1);
+    if (!mounted) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_resultsScrollController.hasClients) return;
@@ -165,6 +168,77 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
         _resultsScrollController.position.minScrollExtent,
       );
     });
+  }
+
+  /// 音源切换：缓存命中直接展示，未加载过才请求第 1 页。
+  void _onSourceSelected(MusicSource source) {
+    final current = ref.read(searchControllerProvider).source;
+    if (source == current) return;
+    ref.read(searchControllerProvider.notifier).selectSource(source);
+    final st = _stateFor(source);
+    if (st.results.isNotEmpty) return; // 缓存命中，直接展示
+    final keyword = ref.read(searchControllerProvider).keyword.trim();
+    if (keyword.isEmpty) return;
+    ref
+        .read(searchControllerProvider.notifier)
+        .search(keyword: keyword, source: source, page: 1);
+  }
+
+  void _onResultsScroll() {
+    if (!_resultsScrollController.hasClients) return;
+    final position = _resultsScrollController.position;
+    // 内容不足一屏时不触发加载，避免首屏过少时连续级联请求。
+    if (position.maxScrollExtent <= 0) return;
+    if (position.extentAfter >= 200) return;
+    final source = ref.read(searchControllerProvider).source;
+    final st = _stateFor(source);
+    if (st.isLoadingMore || !st.hasMore) return;
+    _loadNextPage(source);
+  }
+
+  Future<void> _loadNextPage(MusicSource source) async {
+    final st = _stateFor(source);
+    if (st.isLoadingMore) return;
+    st.isLoadingMore = true;
+    if (mounted) setState(() {});
+
+    final keyword = ref.read(searchControllerProvider).keyword.trim();
+    final requestPage = st.page + 1;
+    try {
+      final api = ref.read(musicApiProvider);
+      final response = await api.searchMusic(
+        keyword: keyword,
+        source: source,
+        page: requestPage,
+        limit: 30,
+      );
+      if (!mounted) return;
+      // 中途关键词或音源变化：丢弃本次结果。
+      final stillCurrent =
+          ref.read(searchControllerProvider).keyword.trim() == keyword &&
+          ref.read(searchControllerProvider).source == source;
+      if (!stillCurrent) return;
+
+      if (response.list.isEmpty) {
+        st.hasMore = false;
+      } else {
+        final seen = st.results.map((m) => m.id).toSet();
+        for (final music in response.list) {
+          if (seen.add(music.id)) st.results.add(music);
+        }
+        st.page = response.page;
+      }
+    } catch (error) {
+      if (mounted) {
+        showAppToast(context, '加载更多失败：$error', type: AppToastType.error);
+      }
+      // 保留 hasMore = true，下次滚动可重试。
+    } finally {
+      if (mounted) {
+        st.isLoadingMore = false;
+        setState(() {});
+      }
+    }
   }
 
   @override
@@ -182,7 +256,26 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
 
     ref.listen<SearchState>(searchControllerProvider, _handleSearchStateChanged);
 
-    _syncToolbarState(state);
+    // 监听控制器响应（第 1 页）：把结果 seed 到对应音源的累加列表。
+    // 加路由守卫，防止发现页共用 controller 时污染首页缓存。
+    ref.listen(
+      searchControllerProvider.select((s) => s.response),
+      (previous, next) {
+        if (next == null) return;
+        final location = GoRouterState.of(context).uri.path;
+        if (location != '/') return;
+        final current = ref.read(searchControllerProvider);
+        if (current.page != 1) return;
+        final st = _stateFor(current.source);
+        st
+          ..page = 1
+          ..results.clear()
+          ..results.addAll(next.list)
+          ..hasMore = next.list.isNotEmpty
+          ..isLoadingMore = false;
+        if (mounted) setState(() {});
+      },
+    );
 
     return BackButtonListener(
       onBackButtonPressed: _handleBackButton,
@@ -203,12 +296,13 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
                 ),
               ),
               if (state.isSearchActive) ...[
-                const SourceFilterChips(),
+                SourceFilterChips(onSourceSelected: _onSourceSelected),
                 const SizedBox(height: 4),
               ],
               Expanded(
                 child: _ResultsArea(
                   state: state,
+                  sourceState: _stateFor(state.source),
                   scrollController: _resultsScrollController,
                   onTapItem: _openPicker,
                   onPlayItem: _play,
@@ -285,37 +379,18 @@ class _HomeSearchViewState extends ConsumerState<HomeSearchView> {
     _lastSuggestionWidgets = const <Widget>[];
     _dismissSearchErrorToast();
     ref.read(searchControllerProvider.notifier).resetToDiscovery();
-    // 视图随即销毁，不会再跑 _syncToolbarState，这里立刻隐藏分页悬浮按钮。
+    // 退出搜索时清空累加缓存。
+    for (final st in _sourceStates.values) {
+      st
+        ..page = 1
+        ..results.clear()
+        ..hasMore = true
+        ..isLoadingMore = false;
+    }
     ref.read(searchToolbarStateProvider.notifier).state =
         const SearchToolbarState();
     _releaseSearchFocus();
     widget.onExit();
-  }
-
-  void _syncToolbarState(SearchState state) {
-    final response = state.response;
-    final hasResults = response != null && response.list.isNotEmpty;
-    final allPage = response?.allPage ?? state.page;
-    final canNext =
-        hasResults && state.page < (allPage > 0 ? allPage : state.page + 1);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final next = SearchToolbarState(
-        visible: hasResults,
-        page: state.page,
-        loading: state.loading,
-        canPrev: hasResults && state.page > 1,
-        canNext: canNext,
-        onPrev: () =>
-            _runSearch(page: state.page - 1, scrollToTopOnSuccess: true),
-        onNext: () =>
-            _runSearch(page: state.page + 1, scrollToTopOnSuccess: true),
-      );
-      // Always refresh the callbacks as well as the visible paging values.
-      // They close over the current SearchState page; keeping an older state
-      // object here makes the FAB look correct while invoking a stale page.
-      ref.read(searchToolbarStateProvider.notifier).state = next;
-    });
   }
 
   void _dismissTransientRoutes() {
@@ -798,6 +873,7 @@ class _CenterStatus extends StatelessWidget {
 class _ResultsArea extends StatelessWidget {
   const _ResultsArea({
     required this.state,
+    required this.sourceState,
     required this.scrollController,
     required this.onTapItem,
     required this.onPlayItem,
@@ -805,6 +881,7 @@ class _ResultsArea extends StatelessWidget {
   });
 
   final SearchState state;
+  final _SourcePageState sourceState;
   final ScrollController scrollController;
   final ValueChanged<MusicInfo> onTapItem;
   final ValueChanged<MusicInfo> onPlayItem;
@@ -823,7 +900,9 @@ class _ResultsArea extends StatelessWidget {
         subtitle: '输入歌名、歌手或专辑，发现可播放与下载的版本',
       );
     }
-    if (response.list.isEmpty) {
+    final list = sourceState.results;
+    if (list.isEmpty) {
+      if (state.loading) return const _SearchLoadingStatus();
       return const _CenterStatus(
         icon: Icons.manage_search_rounded,
         title: '没有找到结果',
@@ -835,20 +914,24 @@ class _ResultsArea extends StatelessWidget {
       key: const PageStorageKey('home-search-results-scroll'),
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 156),
-      itemCount: response.list.length + 1,
-      separatorBuilder: (_, index) =>
-          index == 0 ? const SizedBox(height: 2) : const _SearchResultDivider(),
+      itemCount: list.length + 2,
+      separatorBuilder: (_, index) {
+        if (index == 0) return const SizedBox(height: 2);
+        // 最后一条结果与 footer 之间不画分隔线。
+        if (index == list.length) return const SizedBox.shrink();
+        return const _SearchResultDivider();
+      },
       itemBuilder: (_, index) {
         if (index == 0) {
-          return _ResultsSummary(
-            visibleCount: response.list.length,
-            reportedTotal: response.total,
-            page: state.page,
-            allPage: response.allPage,
-            loading: state.loading,
+          return _ResultsSummary(loadedCount: list.length);
+        }
+        if (index == list.length + 1) {
+          return _LoadMoreFooter(
+            isLoadingMore: sourceState.isLoadingMore,
+            hasMore: sourceState.hasMore,
           );
         }
-        final music = response.list[index - 1];
+        final music = list[index - 1];
         return _ResultTile(
           music: music,
           onTapItem: onTapItem,
@@ -877,106 +960,94 @@ class _SearchResultDivider extends StatelessWidget {
 }
 
 class _ResultsSummary extends StatelessWidget {
-  const _ResultsSummary({
-    required this.visibleCount,
-    required this.reportedTotal,
-    required this.page,
-    required this.allPage,
-    required this.loading,
-  });
+  const _ResultsSummary({required this.loadedCount});
 
-  final int visibleCount;
-  final int reportedTotal;
-  final int page;
-  final int allPage;
-  final bool loading;
+  final int loadedCount;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final countLabel = reportedTotal > 0
-        ? '$reportedTotal 首'
-        : '本页 $visibleCount 首';
-    final normalizedAllPage = allPage < page ? page : allPage;
-    final pageLabel = normalizedAllPage > 1
-        ? '$page / $normalizedAllPage'
-        : '$page';
-    final pageSemantics = normalizedAllPage > 1
-        ? '第 $page 页，共 $normalizedAllPage 页'
-        : '第 $page 页';
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(2, 2, 2, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '搜索结果',
-                    style: TextStyle(
-                      color: scheme.onSurface,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  TextSpan(
-                    text: '  ·  $countLabel',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontSize: 10.75,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Semantics(
-            label: pageSemantics,
-            excludeSemantics: true,
-            child: Container(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (loading) ...[
-                    SizedBox.square(
-                      dimension: 11,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.7,
-                        color: scheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Text(
-                    pageLabel,
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '搜索结果',
+              style: TextStyle(
+                color: scheme.onSurface,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0,
               ),
             ),
-          ),
-        ],
+            TextSpan(
+              text: '  ·  已加载 $loadedCount 首',
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 10.75,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
+}
+
+class _LoadMoreFooter extends StatelessWidget {
+  const _LoadMoreFooter({
+    required this.isLoadingMore,
+    required this.hasMore,
+  });
+
+  final bool isLoadingMore;
+  final bool hasMore;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (isLoadingMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: SizedBox.square(
+            dimension: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: scheme.primary,
+            ),
+          ),
+        ),
+      );
+    }
+    if (!hasMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            '没有更多结果',
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+}
+
+class _SourcePageState {
+  int page = 1;
+  final List<MusicInfo> results = <MusicInfo>[];
+  bool hasMore = true;
+  bool isLoadingMore = false;
 }
 
 class _ResultTile extends ConsumerWidget {

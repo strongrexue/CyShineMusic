@@ -8,7 +8,10 @@ import '../../../theme/app_motion.dart';
 import '../search_controller.dart';
 
 class SourceFilterChips extends ConsumerWidget {
-  const SourceFilterChips({super.key});
+  const SourceFilterChips({super.key, this.onSourceSelected});
+
+  /// 若提供则接管音源切换；否则走默认 setSource（会重搜第 1 页）。
+  final ValueChanged<MusicSource>? onSourceSelected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,9 +66,16 @@ class SourceFilterChips extends ConsumerWidget {
                           key: ValueKey('search-source-${source.code}'),
                           source: source,
                           selected: selected == source,
-                          onTap: () => ref
-                              .read(searchControllerProvider.notifier)
-                              .setSource(source),
+                          onTap: () {
+                            final callback = onSourceSelected;
+                            if (callback != null) {
+                              callback(source);
+                            } else {
+                              ref
+                                  .read(searchControllerProvider.notifier)
+                                  .setSource(source);
+                            }
+                          },
                         ),
                       ),
                   ],
