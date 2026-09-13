@@ -368,6 +368,11 @@ class _LibraryOverflowMenu extends StatelessWidget {
             child: Text(updatingPlaylist ? '正在更新' : '更新歌单'),
           ),
         MenuItemButton(
+          leadingIcon: const Icon(Icons.queue_music_rounded, size: 20),
+          onPressed: () => context.go('/playlists'),
+          child: const Text('歌单管理'),
+        ),
+        MenuItemButton(
           leadingIcon: const Icon(Icons.history_rounded, size: 20),
           onPressed: onOpenHistory ?? () => context.go('/downloads'),
           child: const Text('下载历史'),
