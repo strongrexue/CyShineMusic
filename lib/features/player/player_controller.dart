@@ -124,7 +124,9 @@ class PlayerController extends StateNotifier<PlayerState>
     } else {
       _pendingRestoredSession = restored;
       _hydrateRestoredSession(restored);
-      unawaited(_restorePersistedSession(restored));
+      final autoResume =
+          _ref.read(settingsProvider).autoResumeOnLaunch;
+      unawaited(_restorePersistedSession(restored, autoPlay: autoResume));
     }
   }
 
@@ -1399,6 +1401,12 @@ class PlayerController extends StateNotifier<PlayerState>
     bool showErrors = false,
   }) async {
     if (!identical(_pendingRestoredSession, snapshot)) return;
+    // 进度接近结尾（距结束不足 5 秒）则从头播，避免恢复后立刻播完。
+    final restorePosition =
+        snapshot.duration > Duration.zero &&
+        snapshot.position > snapshot.duration - const Duration(seconds: 5)
+        ? Duration.zero
+        : snapshot.position;
     final restoredTrack = _playerTrackFromPersisted(snapshot.track);
     final quality = _qualityForSnapshot(snapshot, restoredTrack);
     bool restored;
@@ -1410,7 +1418,7 @@ class PlayerController extends StateNotifier<PlayerState>
           restoredTrack,
           fallbackMusic: snapshot.music,
           autoPlay: autoPlay,
-          initialPosition: snapshot.position,
+          initialPosition: restorePosition,
           showErrors: showErrors,
         );
       } else if (snapshot.music != null) {
@@ -1418,7 +1426,7 @@ class PlayerController extends StateNotifier<PlayerState>
           snapshot.music!,
           quality: quality,
           autoPlay: autoPlay,
-          initialPosition: snapshot.position,
+          initialPosition: restorePosition,
           restoredTrack: PlayerTrack.fromMusic(
             music: snapshot.music!,
             quality: quality ?? snapshot.music!.bestQuality,
@@ -1453,7 +1461,7 @@ class PlayerController extends StateNotifier<PlayerState>
         music,
         quality: quality,
         autoPlay: autoPlay,
-        initialPosition: snapshot.position,
+        initialPosition: restorePosition,
         restoredTrack: restoredTrack,
         showErrors: showErrors,
       );

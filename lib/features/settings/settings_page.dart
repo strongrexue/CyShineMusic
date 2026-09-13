@@ -279,10 +279,23 @@ class SettingsPage extends ConsumerWidget {
                               value: settings.bluetoothFullLyricEnabled,
                               onChanged: (value) =>
                                   _setBluetoothFullLyricEnabled(
-                                    context,
-                                    ref,
-                                    value,
-                                  ),
+                                context,
+                                ref,
+                                value,
+                              ),
+                            ),
+                            SettingsSwitchAction(
+                              key: const ValueKey(
+                                'auto-resume-on-launch-setting',
+                              ),
+                              icon: Icons.play_circle_outline_rounded,
+                              title: '应用启动后继续播放当前歌曲',
+                              subtitle:
+                                  '重新打开应用时自动恢复上次播放进度并继续播放',
+                              value: settings.autoResumeOnLaunch,
+                              onChanged: (value) => ref
+                                  .read(settingsProvider.notifier)
+                                  .setAutoResumeOnLaunch(value),
                             ),
                           ],
                         ),

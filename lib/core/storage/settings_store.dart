@@ -30,6 +30,7 @@ const String _kBluetoothFullLyricEnabledKey = 'bluetooth_full_lyric_enabled';
 const String _kBluetoothLyricNoticeSeenKey = 'bluetooth_lyric_notice_seen';
 const String _kDebugModeKey = 'debug_mode';
 const String _kLegacyBaseUrlKey = 'base_url';
+const String _kAutoResumeOnLaunchKey = 'auto_resume_on_launch';
 
 @immutable
 class AppSettings {
@@ -51,6 +52,7 @@ class AppSettings {
     required this.bluetoothFullLyricEnabled,
     required this.bluetoothLyricNoticeSeen,
     required this.debugMode,
+    required this.autoResumeOnLaunch,
   });
 
   final String downloadDir;
@@ -77,6 +79,10 @@ class AppSettings {
   final bool bluetoothLyricNoticeSeen;
   final bool debugMode;
 
+  /// Whether the app should resume the last playback position and start
+  /// playing automatically on launch.
+  final bool autoResumeOnLaunch;
+
   AppSettings copyWith({
     String? downloadDir,
     String? localMusicDir,
@@ -95,6 +101,7 @@ class AppSettings {
     bool? bluetoothFullLyricEnabled,
     bool? bluetoothLyricNoticeSeen,
     bool? debugMode,
+    bool? autoResumeOnLaunch,
   }) => AppSettings(
     downloadDir: downloadDir ?? this.downloadDir,
     localMusicDir: localMusicDir ?? this.localMusicDir,
@@ -115,6 +122,7 @@ class AppSettings {
     bluetoothLyricNoticeSeen:
         bluetoothLyricNoticeSeen ?? this.bluetoothLyricNoticeSeen,
     debugMode: debugMode ?? this.debugMode,
+    autoResumeOnLaunch: autoResumeOnLaunch ?? this.autoResumeOnLaunch,
   );
 
   static const AppSettings fallback = AppSettings(
@@ -135,6 +143,7 @@ class AppSettings {
     bluetoothFullLyricEnabled: false,
     bluetoothLyricNoticeSeen: false,
     debugMode: false,
+    autoResumeOnLaunch: true,
   );
 }
 
@@ -183,6 +192,7 @@ class SettingsNotifier extends Notifier<AppSettings> {
       bluetoothLyricNoticeSeen:
           _prefs.getBool(_kBluetoothLyricNoticeSeenKey) ?? false,
       debugMode: _prefs.getBool(_kDebugModeKey) ?? false,
+      autoResumeOnLaunch: _prefs.getBool(_kAutoResumeOnLaunchKey) ?? true,
     );
   }
 
@@ -361,6 +371,11 @@ class SettingsNotifier extends Notifier<AppSettings> {
   Future<void> setDebugMode(bool value) async {
     await _prefs.setBool(_kDebugModeKey, value);
     state = state.copyWith(debugMode: value);
+  }
+
+  Future<void> setAutoResumeOnLaunch(bool value) async {
+    await _prefs.setBool(_kAutoResumeOnLaunchKey, value);
+    state = state.copyWith(autoResumeOnLaunch: value);
   }
 }
 
