@@ -634,16 +634,15 @@ class _AppShellState extends ConsumerState<AppShell>
                   builder: (context, _) {
                     final showMiniPlayer =
                         !isPlayer && miniPlayerHasContent && _pull.value == 0;
-                    return ClipRect(
-                      child: AnimatedSize(
-                        duration: AppMotion.medium,
-                        curve: AppMotion.emphasized,
-                        child: SizedBox(
-                          height: showMiniPlayer ? 64 : 0,
-                          child: showMiniPlayer
-                              ? MiniPlayerBar(onOpenPlayer: _openPlayer)
-                              : null,
-                        ),
+                    return AnimatedSize(
+                      duration: AppMotion.medium,
+                      curve: AppMotion.emphasized,
+                      clipBehavior: Clip.none,
+                      child: SizedBox(
+                        height: showMiniPlayer ? 64 : 0,
+                        child: showMiniPlayer
+                            ? MiniPlayerBar(onOpenPlayer: _openPlayer)
+                            : null,
                       ),
                     );
                   },
