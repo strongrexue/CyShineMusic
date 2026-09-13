@@ -516,6 +516,8 @@ void main() {
       expect(Icons.high_quality_rounded.fontFamily, 'MaterialIcons');
 
       final anchor = find.byKey(const ValueKey('network-adapter-menu-anchor'));
+      await tester.ensureVisible(anchor);
+      await tester.pumpAndSettle();
       final anchorRect = tester.getRect(anchor);
       final leftTouch = Offset(anchorRect.left + 12, anchorRect.center.dy);
       await tester.tapAt(leftTouch);
@@ -620,6 +622,8 @@ void main() {
       final qualityAnchor = find.byKey(
         const ValueKey('online-quality-menu-anchor'),
       );
+      await tester.ensureVisible(qualityAnchor);
+      await tester.pumpAndSettle();
       await tester.tap(qualityAnchor);
       await tester.pumpAndSettle();
       expect(find.byType(BottomSheet), findsNothing);
@@ -660,6 +664,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final anchor = find.byKey(const ValueKey('search-source-menu-anchor'));
+    await tester.ensureVisible(anchor);
+    await tester.pumpAndSettle();
     await tester.tap(anchor);
     await tester.pumpAndSettle();
     final panel = find.byKey(const ValueKey('search-source-menu-panel'));

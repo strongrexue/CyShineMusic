@@ -6,7 +6,7 @@ import 'color_style.dart';
 class AppTheme {
   const AppTheme._();
 
-  static const Color designSeed = Colors.blue;
+  static const Color designSeed = Color(0xFF7C3AED);
 
   /// Same CJK stack the player lyrics render with, so body text across the
   /// app matches the lyric typography.
@@ -50,84 +50,87 @@ class AppTheme {
   }
 
   static ThemeData _buildFromScheme(ColorScheme scheme) {
+    final resolvedScheme = scheme.brightness == Brightness.dark
+        ? scheme.copyWith(surfaceContainerLow: const Color(0xFF1E1E1E))
+        : scheme;
     return ThemeData(
       useMaterial3: true,
-      colorScheme: scheme,
+      colorScheme: resolvedScheme,
       fontFamilyFallback: fontFallback,
-      scaffoldBackgroundColor: scheme.appSurface,
+      scaffoldBackgroundColor: resolvedScheme.appSurface,
       visualDensity: VisualDensity.standard,
       splashFactory: InkRipple.splashFactory,
       appBarTheme: AppBarTheme(
-        backgroundColor: scheme.surface,
-        foregroundColor: scheme.onSurface,
+        backgroundColor: resolvedScheme.surface,
+        foregroundColor: resolvedScheme.onSurface,
         scrolledUnderElevation: 2,
-        surfaceTintColor: scheme.surfaceTint,
+        surfaceTintColor: resolvedScheme.surfaceTint,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: scheme.onSurface,
+          color: resolvedScheme.onSurface,
           fontSize: 22,
           fontWeight: FontWeight.w500,
         ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: scheme.appContainerLow,
+        color: resolvedScheme.appContainerLow,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
       ),
       chipTheme: ChipThemeData(
-        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-        side: BorderSide(color: scheme.outlineVariant),
+        labelStyle: TextStyle(color: resolvedScheme.onSurfaceVariant),
+        side: BorderSide(color: resolvedScheme.outlineVariant),
       ),
       dividerTheme: DividerThemeData(
-        color: scheme.outlineVariant,
+        color: resolvedScheme.outlineVariant,
         thickness: 1,
         space: 1,
       ),
       listTileTheme: ListTileThemeData(
-        iconColor: scheme.onSurfaceVariant,
-        textColor: scheme.onSurface,
+        iconColor: resolvedScheme.onSurfaceVariant,
+        textColor: resolvedScheme.onSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       inputDecorationTheme: InputDecorationThemeData(
         filled: true,
-        fillColor: scheme.appInputFill,
-        hoverColor: scheme.onSurface.withValues(alpha: 0.04),
+        fillColor: resolvedScheme.appInputFill,
+        hoverColor: resolvedScheme.onSurface.withValues(alpha: 0.04),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderSide: BorderSide(color: resolvedScheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderSide: BorderSide(color: resolvedScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
+          borderSide: BorderSide(color: resolvedScheme.primary, width: 1.6),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: scheme.error),
+          borderSide: BorderSide(color: resolvedScheme.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: scheme.error, width: 1.6),
+          borderSide: BorderSide(color: resolvedScheme.error, width: 1.6),
         ),
-        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-        hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+        labelStyle: TextStyle(color: resolvedScheme.onSurfaceVariant),
+        hintStyle: TextStyle(color: resolvedScheme.onSurfaceVariant),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         elevation: 0,
-        backgroundColor: scheme.appContainerHigh,
-        contentTextStyle: TextStyle(color: scheme.onSurface),
-        actionTextColor: scheme.primary,
+        backgroundColor: resolvedScheme.appContainerHigh,
+        contentTextStyle: TextStyle(color: resolvedScheme.onSurface),
+        actionTextColor: resolvedScheme.primary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: scheme.surfaceContainerLow,
+        backgroundColor: resolvedScheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
         shape: const RoundedRectangleBorder(
@@ -135,7 +138,7 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: scheme.appContainerHigh,
+        backgroundColor: resolvedScheme.appContainerHigh,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(28)),
@@ -151,7 +154,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(72, 48),
           shape: const StadiumBorder(),
-          side: BorderSide(color: scheme.outline),
+          side: BorderSide(color: resolvedScheme.outline),
         ).copyWith(animationDuration: AppMotion.medium),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -165,16 +168,18 @@ class AppTheme {
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: scheme.outline),
+              side: BorderSide(color: resolvedScheme.outline),
             ),
           ),
         ),
       ),
       searchBarTheme: SearchBarThemeData(
         elevation: const WidgetStatePropertyAll(0),
-        backgroundColor: WidgetStatePropertyAll(scheme.appInputFill),
+        backgroundColor: WidgetStatePropertyAll(resolvedScheme.appInputFill),
         surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-        side: WidgetStatePropertyAll(BorderSide(color: scheme.outlineVariant)),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: resolvedScheme.outlineVariant),
+        ),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         ),
@@ -183,9 +188,9 @@ class AppTheme {
         ),
       ),
       searchViewTheme: SearchViewThemeData(
-        backgroundColor: scheme.appContainerHigh,
+        backgroundColor: resolvedScheme.appContainerHigh,
         surfaceTintColor: Colors.transparent,
-        side: BorderSide(color: scheme.outlineVariant),
+        side: BorderSide(color: resolvedScheme.outlineVariant),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
     );

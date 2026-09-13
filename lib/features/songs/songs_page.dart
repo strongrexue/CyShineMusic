@@ -1033,7 +1033,7 @@ class _SongsPageState extends ConsumerState<SongsPage> {
         .length;
     _visibleSongs = songs;
     _syncToolbarState(
-      libraryTitle: selectedPlaylist?.name ?? '歌曲',
+      libraryTitle: selectedPlaylist?.name ?? '收藏',
       activePlaylistId: selectedPlaylist?.id,
       songCount: songs.length,
       selectedCount: selectedCount,

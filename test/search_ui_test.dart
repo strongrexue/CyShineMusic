@@ -78,7 +78,7 @@ void main() {
           .map(_globalRect)
           .where((rect) => rect.top >= 0 && rect.bottom <= toolbarActionTop)
           .length;
-      expect(fullyVisibleRows, 9);
+      expect(fullyVisibleRows, 10);
 
       final firstTile = find.byType(SearchResultTile).first;
       expect(tester.getSize(firstTile).height, 62);
@@ -243,11 +243,11 @@ void main() {
       await _pumpUi(tester);
 
       expect(tester.getSize(find.byTooltip('发现')), const Size(96, 60));
-      final fabRect = tester.getRect(find.byType(FloatingActionButton));
       final downloadRect = tester.getRect(
         find.byType(ExpressiveDownloadButton).last,
       );
-      expect(fabRect.right, lessThan(downloadRect.left));
+      expect(find.byType(FloatingActionButton), findsNothing);
+      expect(downloadRect, isNotNull);
       expect(tester.takeException(), isNull);
     },
   );

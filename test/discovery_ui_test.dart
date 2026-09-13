@@ -24,6 +24,7 @@ import 'package:cy_shine_music/core/ui/container_transform.dart';
 import 'package:cy_shine_music/core/ui/cover_placeholder.dart';
 import 'package:cy_shine_music/features/discovery/discovery_content.dart';
 import 'package:cy_shine_music/features/discovery/discovery_controller.dart';
+import 'package:cy_shine_music/features/discovery/discovery_page.dart';
 import 'package:cy_shine_music/features/discovery/leaderboards_page.dart';
 import 'package:cy_shine_music/features/discovery/online_playlist_detail_page.dart';
 import 'package:cy_shine_music/features/discovery/widgets/leaderboard_artwork.dart';
@@ -144,7 +145,7 @@ void main() {
       final prefs = await _freshPreferences();
       final fake = _FakeDiscoveryApi(delayDetail: true);
       final audioHandler = PlayerAudioHandler();
-      final router = createAppRouter();
+      final router = createAppRouter(initialLocation: '/discover');
       final container = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
@@ -248,7 +249,7 @@ void main() {
     final prefs = await _freshPreferences();
     final fake = _FakeDiscoveryApi();
     final audioHandler = PlayerAudioHandler();
-    final router = createAppRouter();
+    final router = createAppRouter(initialLocation: '/discover');
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -269,7 +270,10 @@ void main() {
 
     expect(find.byType(ShellHeader), findsNothing);
     expect(
-      find.descendant(of: find.byType(SearchPage), matching: find.text('发现')),
+      find.descendant(
+        of: find.byType(DiscoveryPage),
+        matching: find.text('发现'),
+      ),
       findsOneWidget,
     );
     final pagerTop = tester

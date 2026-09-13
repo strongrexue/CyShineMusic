@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/debug/debug_log_page.dart';
+import 'features/discovery/discovery_page.dart';
 import 'features/discovery/leaderboards_page.dart';
 import 'features/discovery/online_playlist_detail_page.dart';
 import 'features/downloads/download_history_page.dart';
 import 'features/equalizer/equalizer_page.dart';
+import 'features/home/home_page.dart';
 import 'core/models/enums.dart';
 import 'core/models/leaderboard_info.dart';
 import 'core/models/online_collection_kind.dart';
@@ -14,7 +16,6 @@ import 'core/ui/container_transform.dart';
 import 'features/playlists/online_playlist_import_page.dart';
 import 'features/playlists/playlist_detail_page.dart';
 import 'features/playlists/playlist_management_page.dart';
-import 'features/search/search_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/settings/webdav_sync_page.dart';
 import 'features/music_sources/music_source_page.dart';
@@ -51,7 +52,13 @@ GoRouter createAppRouter({
           GoRoute(
             path: '/',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: ShellPageStorage(child: SearchPage()),
+              child: ShellPageStorage(child: HomePage()),
+            ),
+          ),
+          GoRoute(
+            path: '/discover',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ShellPageStorage(child: DiscoveryPage()),
             ),
           ),
           GoRoute(

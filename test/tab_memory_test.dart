@@ -32,7 +32,7 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/settings');
 
     // 点歌曲 tab 回到记忆中的歌单视图，而不是 /songs。
-    await tester.tap(find.byTooltip('歌曲'));
+    await tester.tap(find.byTooltip('收藏'));
     await _pumpUi(tester);
     expect(
       router.routeInformationProvider.value.uri.toString(),
@@ -40,7 +40,7 @@ void main() {
     );
 
     // 已在歌曲 tab 内再点一次 → 回 tab 根。
-    await tester.tap(find.byTooltip('歌曲'));
+    await tester.tap(find.byTooltip('收藏'));
     await _pumpUi(tester);
     expect(router.routeInformationProvider.value.uri.path, '/songs');
     expect(tester.takeException(), isNull);
@@ -66,7 +66,7 @@ void main() {
 
     await tester.tap(find.byTooltip('设置'));
     await _pumpUi(tester);
-    await tester.tap(find.byTooltip('歌曲'));
+    await tester.tap(find.byTooltip('收藏'));
     await _pumpUi(tester);
     expect(
       router.routeInformationProvider.value.uri.toString(),
@@ -81,7 +81,7 @@ void main() {
     await _usePhoneViewport(tester);
     final router = await _pumpApp(tester, initialLocation: '/playlists/night');
 
-    await tester.tap(find.byTooltip('播放页'));
+    router.go('/player', extra: '/playlists/night');
     await _pumpUi(tester);
     expect(router.routeInformationProvider.value.uri.path, '/player');
 
@@ -91,7 +91,7 @@ void main() {
 
     await tester.tap(find.byTooltip('设置'));
     await _pumpUi(tester);
-    await tester.tap(find.byTooltip('歌曲'));
+    await tester.tap(find.byTooltip('收藏'));
     await _pumpUi(tester);
     expect(router.routeInformationProvider.value.uri.path, '/playlists/night');
     expect(tester.takeException(), isNull);

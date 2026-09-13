@@ -27,7 +27,7 @@ class ShellHeader extends ConsumerWidget {
     final onlineCollectionDetail =
         location.startsWith('/discover/playlists/') || leaderboardDetail;
     final compact =
-        location == '/' ||
+        location == '/discover' ||
         isSongsLibraryLocation(location) ||
         onlineCollectionDetail;
     final headerTitle =
@@ -69,7 +69,8 @@ class ShellHeader extends ConsumerWidget {
   }
 
   String _titleFor(String location) {
-    if (location == '/') return '发现';
+    if (location == '/') return '首页';
+    if (location == '/discover') return '发现';
     if (location.startsWith('/discover/playlists/')) return '歌单详情';
     if (location.startsWith('/discover/leaderboards/')) {
       return location.split('/').length > 4 ? '榜单详情' : '排行榜';
@@ -86,7 +87,7 @@ class ShellHeader extends ConsumerWidget {
       case '/downloads':
         return '下载';
       case '/songs':
-        return '歌曲';
+        return '收藏';
       case '/player':
         return '播放';
       case '/settings':

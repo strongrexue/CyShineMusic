@@ -50,8 +50,8 @@ void main() {
 
   test('toolbar highlights logical parent sections for child routes', () {
     expect(toolbarIndexFor('/settings/sources'), 3);
-    expect(toolbarIndexFor('/songs/search'), 1);
-    expect(toolbarIndexFor('/playlists/example'), 1);
+    expect(toolbarIndexFor('/songs/search'), 2);
+    expect(toolbarIndexFor('/playlists/example'), 2);
   });
 }
 

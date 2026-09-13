@@ -25,8 +25,10 @@ bool isImmersivePlaylistDetailLocation(String location) {
       leaderboardDetail;
 }
 
+bool isHomeLocation(String location) => location == '/';
+
 bool isDiscoveryLocation(String location) =>
-    location == '/' || location.startsWith('/discover/');
+    location == '/discover' || location.startsWith('/discover/');
 
 bool isSongsLibraryLocation(String location) {
   return location == '/songs' || location == '/songs/search';

@@ -1,228 +1,126 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/ui/cover_image_source.dart';
 import '../../../theme/app_motion.dart';
 import '../../player/player_controller.dart';
-import '../../player/widgets/spinning_cover_art.dart';
 
-/// Mini "now playing" strip that shares the bottom toolbar capsule: spinning
-/// cover art on the left, track title in the middle, transport controls on
-/// the right. Swapped in and out of the capsule by the toolbar pager.
 class MiniPlayerBar extends ConsumerWidget {
-  const MiniPlayerBar({
-    super.key,
-    required this.width,
-    required this.height,
-    required this.onOpenPlayer,
-  });
+  const MiniPlayerBar({super.key, required this.onOpenPlayer});
 
-  final double width;
-  final double height;
   final VoidCallback onOpenPlayer;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final vm = ref.watch(
       playerControllerProvider.select(
-        (s) => (
-          track: s.track,
-          playing: s.playing,
-          loading: s.loading,
-          buffering: s.buffering,
-          ended: s.processingState == PlayerProcessingState.completed,
-          canPrev: s.canPlayPrevious,
-          canNext: s.canPlayNext,
+        (state) => (
+          track: state.track,
+          playing: state.playing,
+          loading: state.loading,
+          buffering: state.buffering,
+          ended: state.processingState == PlayerProcessingState.completed,
         ),
       ),
     );
     final controller = ref.read(playerControllerProvider.notifier);
     final track = vm.track;
-    final canControl = track != null && !vm.loading;
-    // Narrow capsules (small screens at min action width) drop the artist
-    // line and shrink the artwork/buttons so everything still fits.
-    final compact = width < 240;
-    final coverSize = compact ? 36.0 : 44.0;
-    final buttonSize = compact ? 36.0 : 40.0;
+    if (track == null) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final canControl = !vm.loading;
+    final label = [
+      track.title,
+      if (track.artist.trim().isNotEmpty) track.artist,
+    ].join(' · ');
 
-    return Row(
-      children: [
-        const SizedBox(width: 4),
-        Expanded(
-          child: Tooltip(
-            message: '打开播放页',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onOpenPlayer,
-              child: Row(
-                children: [
-                  SizedBox.square(
-                    dimension: coverSize,
-                    child: track == null
-                        ? _IdleCover(scheme: scheme)
-                        : SpinningCoverArt(
-                            track: track,
-                            size: coverSize,
-                            placeholder: ColoredBox(
-                              color: scheme.surfaceContainerHighest,
-                              child: Center(
-                                child: Icon(
-                                  Icons.album_rounded,
-                                  size: 20,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _TrackLabels(
-                      track: track,
-                      compact: compact,
-                      scheme: scheme,
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onOpenPlayer,
+        child: SizedBox(
+          height: 64,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            child: Row(
+              children: [
+                _MiniCover(track: track),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: scheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.15,
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                _MiniPlayButton(
+                  playing: vm.playing,
+                  showSpinner: vm.loading || vm.buffering,
+                  ended: vm.ended,
+                  canControl: canControl,
+                  controller: controller,
+                ),
+              ],
             ),
           ),
-        ),
-        _MiniControlButton(
-          tooltip: '上一首',
-          icon: Icons.skip_previous_rounded,
-          size: buttonSize,
-          onPressed: canControl && vm.canPrev ? controller.playPrevious : null,
-        ),
-        _MiniPlayButton(
-          playing: vm.playing,
-          showSpinner: vm.loading || vm.buffering,
-          ended: vm.ended,
-          canControl: canControl,
-          controller: controller,
-          size: buttonSize,
-        ),
-        _MiniControlButton(
-          tooltip: '下一首',
-          icon: Icons.skip_next_rounded,
-          size: buttonSize,
-          onPressed: canControl && vm.canNext ? controller.playNext : null,
-        ),
-        const SizedBox(width: 4),
-      ],
-    );
-  }
-}
-
-class _IdleCover extends StatelessWidget {
-  const _IdleCover({required this.scheme});
-
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: scheme.surfaceContainerHighest,
-      ),
-      child: Center(
-        child: Icon(
-          Icons.album_rounded,
-          size: 20,
-          color: scheme.onSurfaceVariant,
         ),
       ),
     );
   }
 }
 
-class _TrackLabels extends StatelessWidget {
-  const _TrackLabels({
-    required this.track,
-    required this.compact,
-    required this.scheme,
-  });
+class _MiniCover extends StatelessWidget {
+  const _MiniCover({required this.track});
 
-  final PlayerTrack? track;
-  final bool compact;
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    final track = this.track;
-    if (track == null) {
-      return Text(
-        '暂无播放',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: scheme.onSurfaceVariant.withValues(alpha: 0.72),
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      );
-    }
-    final artist = track.artist.trim();
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          track.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: scheme.onSurface,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
-          ),
-        ),
-        if (!compact && artist.isNotEmpty) ...[
-          const SizedBox(height: 1),
-          Text(
-            artist,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: scheme.onSurfaceVariant,
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              height: 1.2,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _MiniControlButton extends StatelessWidget {
-  const _MiniControlButton({
-    required this.tooltip,
-    required this.icon,
-    required this.size,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final double size;
-  final VoidCallback? onPressed;
+  final PlayerTrack track;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final enabled = onPressed != null;
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      padding: EdgeInsets.zero,
-      constraints: BoxConstraints.tightFor(width: size, height: size),
-      icon: Icon(
-        icon,
-        size: 24,
-        color: scheme.onSurfaceVariant.withValues(alpha: enabled ? 1 : 0.35),
+    final normalized = CoverImageSource.normalizeUrl(track.coverUrl, size: 200);
+    final placeholder = Container(
+      width: 48,
+      height: 48,
+      color: scheme.onSurface.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.album_rounded,
+        color: scheme.onSurfaceVariant,
+        size: 22,
+      ),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox.square(
+        dimension: 48,
+        child: track.coverBytes != null && track.coverBytes!.isNotEmpty
+            ? Image.memory(
+                track.coverBytes!,
+                fit: BoxFit.cover,
+                cacheWidth: 120,
+                cacheHeight: 120,
+                errorBuilder: (_, _, _) => placeholder,
+              )
+            : normalized == null || normalized.isEmpty
+            ? placeholder
+            : CachedNetworkImage(
+                imageUrl: normalized,
+                httpHeaders: CoverImageSource.headersFor(normalized),
+                fit: BoxFit.cover,
+                memCacheWidth: 120,
+                memCacheHeight: 120,
+                placeholder: (_, _) => placeholder,
+                errorWidget: (_, _, _) => placeholder,
+              ),
       ),
     );
   }
@@ -235,7 +133,6 @@ class _MiniPlayButton extends StatelessWidget {
     required this.ended,
     required this.canControl,
     required this.controller,
-    required this.size,
   });
 
   final bool playing;
@@ -243,35 +140,28 @@ class _MiniPlayButton extends StatelessWidget {
   final bool ended;
   final bool canControl;
   final PlayerController controller;
-  final double size;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = scheme.onSurfaceVariant.withValues(
-      alpha: canControl ? 1 : 0.35,
-    );
     final Widget glyph;
     if (showSpinner) {
       glyph = SizedBox.square(
-        key: const ValueKey('mini-play:spinner'),
-        dimension: 16,
+        dimension: 18,
         child: CircularProgressIndicator(
-          strokeWidth: 2.4,
-          color: scheme.onSurfaceVariant,
+          strokeWidth: 2.2,
+          color: scheme.primary,
         ),
       );
     } else {
-      final icon = ended
-          ? Icons.replay_rounded
-          : playing
-          ? Icons.pause_rounded
-          : Icons.play_arrow_rounded;
       glyph = Icon(
-        icon,
-        key: ValueKey('mini-play:${icon.codePoint}'),
+        ended
+            ? Icons.replay_rounded
+            : playing
+            ? Icons.pause_rounded
+            : Icons.play_arrow_rounded,
+        color: scheme.primary,
         size: 26,
-        color: color,
       );
     }
     return IconButton(
@@ -284,7 +174,7 @@ class _MiniPlayButton extends StatelessWidget {
           ? (ended ? controller.replay : controller.toggle)
           : null,
       padding: EdgeInsets.zero,
-      constraints: BoxConstraints.tightFor(width: size, height: size),
+      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       icon: AnimatedSwitcher(
         duration: MediaQuery.disableAnimationsOf(context)
             ? Duration.zero

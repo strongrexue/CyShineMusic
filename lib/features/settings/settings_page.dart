@@ -65,6 +65,53 @@ class SettingsPage extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SettingsCard(
+                          title: '外观',
+                          children: [
+                            ThemeModeRow(value: settings.themeMode),
+                            const SizedBox(height: 18),
+                            ThemeSeedRow(
+                              value: settings.themeSeed,
+                              onPick: (color) => ref
+                                  .read(settingsProvider.notifier)
+                                  .setThemeSeed(color),
+                              onCustomize: () => _pickThemeSeed(context, ref),
+                            ),
+                            const SizedBox(height: 18),
+                            ColorStyleRow(
+                              value: settings.colorStyle,
+                              seed: settings.themeSeed,
+                              enabled:
+                                  !(settings.useDynamicColor &&
+                                      dynamicColor.available),
+                              onPick: (style) => ref
+                                  .read(settingsProvider.notifier)
+                                  .setColorStyle(style),
+                            ),
+                            const SizedBox(height: 18),
+                            DynamicColorRow(
+                              value: settings.useDynamicColor,
+                              available: dynamicColor.available,
+                              onChanged: (value) => ref
+                                  .read(settingsProvider.notifier)
+                                  .setUseDynamicColor(value),
+                            ),
+                            const SizedBox(height: 4),
+                            SettingsSwitchAction(
+                              key: const ValueKey('flowing-light-setting'),
+                              icon: Icons.blur_on_rounded,
+                              title: '动态流光',
+                              subtitle: settings.flowingLightEnabled
+                                  ? '播放页背景取封面主色缓慢流动'
+                                  : '播放页使用静态封面模糊背景',
+                              value: settings.flowingLightEnabled,
+                              onChanged: (value) => ref
+                                  .read(settingsProvider.notifier)
+                                  .setFlowingLightEnabled(value),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 30),
+                        SettingsCard(
                           title: '音源与网络',
                           children: [
                             SettingsAction(
@@ -382,53 +429,6 @@ class SettingsPage extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 30),
-                        SettingsCard(
-                          title: '外观',
-                          children: [
-                            ThemeModeRow(value: settings.themeMode),
-                            const SizedBox(height: 18),
-                            ThemeSeedRow(
-                              value: settings.themeSeed,
-                              onPick: (color) => ref
-                                  .read(settingsProvider.notifier)
-                                  .setThemeSeed(color),
-                              onCustomize: () => _pickThemeSeed(context, ref),
-                            ),
-                            const SizedBox(height: 18),
-                            ColorStyleRow(
-                              value: settings.colorStyle,
-                              seed: settings.themeSeed,
-                              enabled:
-                                  !(settings.useDynamicColor &&
-                                      dynamicColor.available),
-                              onPick: (style) => ref
-                                  .read(settingsProvider.notifier)
-                                  .setColorStyle(style),
-                            ),
-                            const SizedBox(height: 18),
-                            DynamicColorRow(
-                              value: settings.useDynamicColor,
-                              available: dynamicColor.available,
-                              onChanged: (value) => ref
-                                  .read(settingsProvider.notifier)
-                                  .setUseDynamicColor(value),
-                            ),
-                            const SizedBox(height: 4),
-                            SettingsSwitchAction(
-                              key: const ValueKey('flowing-light-setting'),
-                              icon: Icons.blur_on_rounded,
-                              title: '动态流光',
-                              subtitle: settings.flowingLightEnabled
-                                  ? '播放页背景取封面主色缓慢流动'
-                                  : '播放页使用静态封面模糊背景',
-                              value: settings.flowingLightEnabled,
-                              onChanged: (value) => ref
-                                  .read(settingsProvider.notifier)
-                                  .setFlowingLightEnabled(value),
                             ),
                           ],
                         ),

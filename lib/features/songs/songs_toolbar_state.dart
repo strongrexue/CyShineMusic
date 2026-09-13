@@ -31,7 +31,7 @@ enum SongSortMode {
 class SongsToolbarState {
   const SongsToolbarState({
     this.owner,
-    this.libraryTitle = '歌曲',
+    this.libraryTitle = '收藏',
     this.activePlaylistId,
     this.songCount = 0,
     this.selectedCount = 0,

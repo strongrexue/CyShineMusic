@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class SeedPalette {
   const SeedPalette._();
 
-  static const Color defaultSeed = Colors.blue;
+  static const Color defaultSeed = Color(0xFF7C3AED);
 
   static const List<SeedColor> presets = [
     SeedColor('Blue', Colors.blue),

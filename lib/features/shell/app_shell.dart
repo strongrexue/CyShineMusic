@@ -10,6 +10,7 @@ import '../../core/ui/app_toast.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_theme.dart';
 import '../player/player_page.dart';
+import '../player/player_controller.dart';
 import '../playlists/playlist_detail_toolbar_state.dart';
 import '../songs/songs_toolbar_state.dart';
 import 'player_pull_scope.dart';
@@ -18,6 +19,7 @@ import 'shell_toolbar_visibility.dart';
 import 'tab_location_memory.dart';
 import 'widgets/bottom_toolbar.dart';
 import 'widgets/discovery_category_fab.dart';
+import 'widgets/mini_player_bar.dart';
 import 'widgets/search_paging_fab.dart';
 import 'widgets/shell_header.dart';
 import 'widgets/toolbar_metrics.dart';
@@ -249,6 +251,16 @@ class _AppShellState extends ConsumerState<AppShell>
     context.go(destination);
   }
 
+  void _openPlayer() {
+    if (widget.location == '/player') return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    final destination = normalizedPlayerReturnLocation(
+      widget.routeLocation,
+      _playerReturnLocation,
+    );
+    context.go('/player', extra: destination);
+  }
+
   TickerFuture _animatePullTo(double target, {Curve? curve}) {
     if ((_pull.value - target).abs() < 0.001 ||
         (MediaQuery.maybeDisableAnimationsOf(context) ?? false)) {
@@ -270,7 +282,6 @@ class _AppShellState extends ConsumerState<AppShell>
     final routeLocation = widget.routeLocation;
     if (location == '/player') return;
     final index = toolbarIndexFor(location);
-    if (index == 2) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final memory = ref.read(tabLocationMemoryProvider);
@@ -331,8 +342,9 @@ class _AppShellState extends ConsumerState<AppShell>
       context.pop();
     } else if (widget.location == '/player') {
       unawaited(_dismissPlayer());
-    } else if (isDiscoveryLocation(widget.location) && widget.location != '/') {
-      context.go('/');
+    } else if (isDiscoveryLocation(widget.location) &&
+        widget.location != '/discover') {
+      context.go('/discover');
     } else if (isPlaylistLocation(widget.location)) {
       context.go(widget.playlistBackLocation);
     } else {
@@ -486,9 +498,17 @@ class _AppShellState extends ConsumerState<AppShell>
     // 歌单/榜单详情」之间保持不变，详情页的容器变换展开/收回时下层内容
     // 才不会跳动。
     final hidesShellHeader =
-        isPlayer || isImmersivePlaylist || isDiscoveryLocation(widget.location);
+        isPlayer ||
+        isImmersivePlaylist ||
+        isHomeLocation(widget.location) ||
+        isDiscoveryLocation(widget.location);
     final toolbarTravelExtent = _bottomToolbarTravelExtent(context);
     _toolbarTravelExtent = toolbarTravelExtent;
+    final miniPlayerHasContent = ref.watch(
+      playerControllerProvider.select(
+        (state) => state.hasTrack || state.loading,
+      ),
+    );
 
     ref.listen<bool>(shellToolbarVisibleProvider, (previous, next) {
       if (next && previous == false) _animateToolbarTo(1);
@@ -605,6 +625,31 @@ class _AppShellState extends ConsumerState<AppShell>
               ),
               _buildPlayerLayer(isPlayer),
               Positioned(
+                key: const ValueKey('shell-mini-player'),
+                left: 14,
+                right: 14,
+                bottom: toolbarTravelExtent + 8,
+                child: AnimatedBuilder(
+                  animation: _pull,
+                  builder: (context, _) {
+                    final showMiniPlayer =
+                        !isPlayer && miniPlayerHasContent && _pull.value == 0;
+                    return ClipRect(
+                      child: AnimatedSize(
+                        duration: AppMotion.medium,
+                        curve: AppMotion.emphasized,
+                        child: SizedBox(
+                          height: showMiniPlayer ? 64 : 0,
+                          child: showMiniPlayer
+                              ? MiniPlayerBar(onOpenPlayer: _openPlayer)
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Positioned(
                 key: const ValueKey('shell-toolbar'),
                 left: 0,
                 right: 0,
@@ -616,7 +661,7 @@ class _AppShellState extends ConsumerState<AppShell>
                   travelExtent: toolbarTravelExtent,
                 ),
               ),
-              if (widget.location == '/')
+              if (widget.location == '/discover')
                 Positioned.fill(
                   key: ValueKey('shell-fab'),
                   child: const Stack(
@@ -625,6 +670,13 @@ class _AppShellState extends ConsumerState<AppShell>
                       SearchPagingFabLayer(),
                     ],
                   ),
+                )
+              else if (widget.location == '/')
+                // 首页仅在完整搜索视图中有结果时显示翻页悬浮按钮
+                // （SearchPagingFabLayer 依据 searchToolbarState 自管显隐）。
+                Positioned.fill(
+                  key: ValueKey('shell-home-fab'),
+                  child: const SearchPagingFabLayer(),
                 ),
             ],
           ),
@@ -761,7 +813,10 @@ enum _ShellRouteMotion { forward, backward, playerEnter, playerExit }
 const _doubleBackExitWindow = Duration(seconds: 2);
 
 bool _isTopLevelMenuLocation(String location) {
-  return location == '/' || location == '/songs' || location == '/settings';
+  return location == '/' ||
+      location == '/discover' ||
+      location == '/songs' ||
+      location == '/settings';
 }
 
 _ShellRouteMotion _motionFor(String from, String to) {
@@ -777,7 +832,8 @@ int _routeOrder(String location) {
   if (location.startsWith('/settings')) return 4;
   return switch (location) {
     '/' => 0,
-    '/songs' => 1,
+    '/discover' => 1,
+    '/songs' => 2,
     '/songs/search' => 2,
     '/downloads' => 2,
     '/player' => 3,
@@ -787,7 +843,7 @@ int _routeOrder(String location) {
 }
 
 String _shellContentAnimationKey(String location) {
-  return isDiscoveryLocation(location) ? '/' : location;
+  return isDiscoveryLocation(location) ? '/discover' : location;
 }
 
 const _appTaskChannel = MethodChannel('cy_shine_music/app_task');

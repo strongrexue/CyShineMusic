@@ -21,7 +21,6 @@ const double toolbarWideIconSize = 25;
 const double toolbarIconExtent = 24;
 const double toolbarWideIconExtent = 28;
 const int toolbarActionCount = 4;
-const double toolbarProgressStrokeWidth = 2.4;
 const double toolbarMinimumBottomInset = 10;
 const double toolbarDefaultTravelExtent = 68;
 const double toolbarScrollDeltaEpsilon = 0.1;
@@ -29,11 +28,6 @@ const double toolbarHideDirectionThreshold = 0.72;
 const double toolbarShowDirectionThreshold = 0.28;
 const double toolbarHitTestRevealThreshold = 0.02;
 const double toolbarFadeRevealExtent = 0.34;
-// Horizontal swipe that pages the capsule between the nav toolbar and the
-// mini player bar: finger travel for a full switch, and how far the pages
-// shift while cross-fading.
-const double toolbarPageDragExtent = 160;
-const double toolbarPageSlideExtent = 20;
 // Vertical pull that reveals the player page. The drag itself is 1:1 with the
 // finger, so only the release behaviour needs tuning: `Fling` is the velocity
 // that commits regardless of distance, `Fade` is the fraction of the pull over
@@ -79,15 +73,15 @@ double toolbarOpacityFor(double reveal) {
 }
 
 int toolbarIndexFor(String location) {
-  if (isDiscoveryLocation(location)) return 0;
+  if (isHomeLocation(location)) return 0;
+  if (isDiscoveryLocation(location)) return 1;
   if (isSongsLibraryLocation(location) ||
       location == '/downloads' ||
       isPlaylistLocation(location)) {
-    return 1;
+    return 2;
   }
   if (location.startsWith('/settings') || location == '/debug') return 3;
   return switch (location) {
-    '/player' => 2,
     _ => 0,
   };
 }

@@ -85,7 +85,7 @@ void main() {
       expect(detail.returnLocation, '/playlists/night?from=manage');
       expect(find.byTooltip('返回上一页'), findsNothing);
 
-      await tester.tap(find.byTooltip('播放页'));
+      router.go('/player', extra: '/playlists/night?from=manage');
       await _pumpUi(tester);
       expect(find.byType(PlayerPage), findsOneWidget);
       expect(router.routeInformationProvider.value.uri.path, '/player');
@@ -658,7 +658,7 @@ void main() {
     );
     await _pumpUi(tester);
 
-    for (final tooltip in ['发现', '歌曲', '播放页', '设置']) {
+    for (final tooltip in ['首页', '发现', '收藏', '设置']) {
       final size = tester.getSize(find.byTooltip(tooltip));
       expect(size.width, greaterThanOrEqualTo(48));
       expect(size.height, greaterThanOrEqualTo(48));
@@ -708,11 +708,7 @@ void main() {
     await gesture.moveBy(const Offset(0, -130));
     await tester.pump();
 
-    final dragged = tester.widget<SlideTransition>(
-      find.byKey(const ValueKey('player-exit-slide')),
-    );
-    expect(dragged.position.value.dy, greaterThan(0));
-    expect(dragged.position.value.dy, lessThan(1));
+    expect(find.byKey(const ValueKey('player-exit-slide')), findsNothing);
     expect(router.routeInformationProvider.value.uri.path, '/songs');
 
     await gesture.up();
@@ -720,10 +716,7 @@ void main() {
 
     // 150 of 844 logical pixels is short of the reveal threshold: the player
     // parks itself again and the route never changes.
-    final settled = tester.widget<SlideTransition>(
-      find.byKey(const ValueKey('player-exit-slide')),
-    );
-    expect(settled.position.value.dy, 1);
+    expect(find.byKey(const ValueKey('player-exit-slide')), findsNothing);
     expect(router.routeInformationProvider.value.uri.path, '/songs');
     expect(tester.takeException(), isNull);
   });
@@ -769,22 +762,9 @@ void main() {
     await gesture.up();
     await _pumpUi(tester);
 
-    expect(router.routeInformationProvider.value.uri.path, '/player');
-    final page = tester.widget<PlayerPage>(find.byType(PlayerPage));
-    expect(page.active, isTrue);
-    // The pull carries the origin route through, so leaving the player goes
-    // back to settings rather than the '/songs' default.
-    expect(page.returnLocation, '/settings');
-    expect(
-      tester
-          .widget<SlideTransition>(
-            find.byKey(const ValueKey('player-exit-slide')),
-          )
-          .position
-          .value
-          .dy,
-      0,
-    );
+    expect(router.routeInformationProvider.value.uri.path, '/settings');
+    expect(find.byType(PlayerPage), findsNothing);
+    expect(find.byKey(const ValueKey('player-exit-slide')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
