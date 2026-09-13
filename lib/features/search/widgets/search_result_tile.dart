@@ -25,6 +25,8 @@ class SearchResultTile extends StatelessWidget {
     this.coverUrl,
     this.coverLoading = false,
     this.onCoverError,
+    this.liked = false,
+    this.onToggleLike,
   });
 
   final MusicInfo music;
@@ -35,6 +37,8 @@ class SearchResultTile extends StatelessWidget {
   final String? coverUrl;
   final bool coverLoading;
   final VoidCallback? onCoverError;
+  final bool liked;
+  final VoidCallback? onToggleLike;
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +167,29 @@ class SearchResultTile extends StatelessWidget {
                       tonal: true,
                       idleIcon: Icons.playlist_add_rounded,
                     ),
-                  if (onAddToPlaylist != null) const SizedBox(width: 2),
+                  if (onAddToPlaylist != null) const SizedBox(width: 4),
+                  if (onToggleLike != null) ...[
+                    IconButton(
+                      key: ValueKey('search-result-like-${music.id}'),
+                      tooltip: liked ? '取消喜欢' : '喜欢',
+                      onPressed: onToggleLike,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 36,
+                        height: 36,
+                      ),
+                      icon: Icon(
+                        liked
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: liked
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                  ],
                   ExpressiveDownloadButton(
                     key: ValueKey('search-result-download-${music.id}'),
                     isLoading: busy,

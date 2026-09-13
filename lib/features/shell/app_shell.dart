@@ -628,7 +628,7 @@ class _AppShellState extends ConsumerState<AppShell>
                 key: const ValueKey('shell-mini-player'),
                 left: 14,
                 right: 14,
-                bottom: toolbarTravelExtent + 8,
+                bottom: toolbarTravelExtent + 4,
                 child: AnimatedBuilder(
                   animation: _pull,
                   builder: (context, _) {

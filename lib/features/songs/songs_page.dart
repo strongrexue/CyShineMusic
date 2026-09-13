@@ -22,7 +22,10 @@ import '../playlists/playlist_browser_sheet.dart';
 import '../playlists/playlist_models.dart';
 import '../playlists/playlist_store.dart';
 import '../playlists/widgets/playlist_artwork.dart';
+import '../search/widgets/quality_picker_sheet.dart';
+import '../search/widgets/search_result_tile.dart';
 import '../shell/shell_toolbar_visibility.dart';
+import 'liked_songs_provider.dart';
 import 'local_song_scan_cache.dart';
 import 'scanned_song_file.dart';
 import 'song_search.dart';
@@ -931,12 +934,7 @@ class _SongsPageState extends ConsumerState<SongsPage> {
             ),
           ),
           ...switch (_tab) {
-            _CollectionTab.liked => const [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: EmptyLikedSongs(),
-              ),
-            ],
+            _CollectionTab.liked => _buildLikedSlivers(),
             _CollectionTab.local => _buildLocalSlivers(
               songs: songs,
               scanning: scanning,
@@ -971,6 +969,67 @@ class _SongsPageState extends ConsumerState<SongsPage> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildLikedSlivers() {
+    final liked = ref.watch(likedSongsProvider);
+    if (liked.isEmpty) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: EmptyLikedSongs(),
+        ),
+      ];
+    }
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 104),
+        sliver: SliverList.separated(
+          itemCount: liked.length,
+          separatorBuilder: (_, _) => const SongListDivider(),
+          itemBuilder: (context, index) {
+            final item = liked[index];
+            final music = item.music;
+            return SearchResultTile(
+              key: ValueKey('liked-song-${item.id}'),
+              music: music,
+              liked: true,
+              onToggleLike: () =>
+                  ref.read(likedSongsProvider.notifier).toggle(music),
+              onPlay: () => unawaited(_playLiked(item, liked)),
+              onDownload: () => showQualityPickerSheet(context, music),
+            );
+          },
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _playLiked(
+    LikedSongEntry item,
+    List<LikedSongEntry> liked,
+  ) async {
+    final queue = <DownloadHistoryEntry>[];
+    DownloadHistoryEntry? selected;
+    for (final likedEntry in liked) {
+      final queueEntry = PlaylistTrack.fromMusicInfo(
+        likedEntry.music,
+      ).toQueueEntry(playlistId: 'liked:songs');
+      if (queueEntry == null) continue;
+      queue.add(queueEntry);
+      if (likedEntry.id == item.id) selected = queueEntry;
+    }
+    final entry = selected;
+    if (entry == null) return;
+    final available = await ensureQueueEntryMusicSourceAvailable(
+      context,
+      entry,
+    );
+    if (!available || !mounted) return;
+    context.go('/player', extra: '/songs');
+    await ref
+        .read(playerControllerProvider.notifier)
+        .playFromPlaylistQueue(entry, queue);
   }
 
   List<Widget> _buildLocalSlivers({

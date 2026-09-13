@@ -26,6 +26,7 @@ import '../playlists/widgets/playlist_detail_actions.dart';
 import '../playlists/widgets/playlist_wide_layout.dart';
 import '../search/widgets/quality_picker_sheet.dart';
 import '../search/widgets/search_result_tile.dart';
+import '../songs/liked_songs_provider.dart';
 import 'discovery_controller.dart';
 
 class OnlinePlaylistDetailPage extends ConsumerStatefulWidget {
@@ -526,6 +527,11 @@ class _OnlinePlaylistTrackTileState
         (value) => value.latestTaskForMusic(widget.music.id),
       ),
     );
+    final liked = ref.watch(
+      likedSongsProvider.select(
+        (entries) => entries.any((entry) => entry.id == likedSongId(widget.music)),
+      ),
+    );
     final fallback = _fallbackRequested
         ? ref.watch(onlineTrackCoverProvider(OnlineTrackCoverKey(widget.music)))
         : null;
@@ -539,6 +545,9 @@ class _OnlinePlaylistTrackTileState
       downloadTask: task,
       onDownload: () => showQualityPickerSheet(context, widget.music),
       onPlay: widget.onPlay ?? () {},
+      liked: liked,
+      onToggleLike: () =>
+          ref.read(likedSongsProvider.notifier).toggle(widget.music),
     );
   }
 }
