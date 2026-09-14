@@ -29,7 +29,7 @@ class WebDavClient {
   final WebDavSyncConfig config;
   final Dio _dio;
 
-  Uri get directoryUri => Uri.parse('${config.baseUrl}/CyShineMusic');
+  Uri get directoryUri => Uri.parse('${config.baseUrl}/MuyinMusic');
   Uri get snapshotUri => Uri.parse('${directoryUri.toString()}/sync-v1.json');
 
   static Dio _createDio() => createDio(

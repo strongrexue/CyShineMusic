@@ -64,7 +64,7 @@ class FlacMetadataWriter {
     final replacePicture = pictureBytes != null && pictureBytes.isNotEmpty;
 
     final existingComments = <_VorbisComment>[];
-    var vendor = 'cy_shine_music';
+    var vendor = 'muyin_music';
     var sawVorbisComment = false;
     for (final block in layout.blocks) {
       if (block.type != _typeVorbisComment) continue;

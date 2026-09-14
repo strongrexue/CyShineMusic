@@ -1,4 +1,4 @@
-package com.cyshine.music
+package com.muyin.muyinmusic
 
 import android.content.Intent
 import android.graphics.Color
@@ -19,7 +19,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
-import com.cyshine.music.source.MusicSourceRuntimeBridge
+import com.muyin.muyinmusic.source.MusicSourceRuntimeBridge
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -34,11 +34,11 @@ import org.jaudiotagger.tag.images.AndroidArtwork
 import org.jaudiotagger.tag.reference.PictureTypes
 
 class MainActivity : AudioServiceActivity() {
-    private val mediaScanChannel = "cy_shine_music/media_scan"
-    private val audioIntentChannel = "cy_shine_music/audio_intent"
-    private val nativeTaggerChannel = "cy_shine_music/native_tagger"
-    private val appTaskChannel = "cy_shine_music/app_task"
-    private val storageBrowserChannel = "cy_shine_music/storage_browser"
+    private val mediaScanChannel = "muyin_music/media_scan"
+    private val audioIntentChannel = "muyin_music/audio_intent"
+    private val nativeTaggerChannel = "muyin_music/native_tagger"
+    private val appTaskChannel = "muyin_music/app_task"
+    private val storageBrowserChannel = "muyin_music/storage_browser"
     private var musicSourceRuntimeBridge: MusicSourceRuntimeBridge? = null
     private var displayListener: DisplayManager.DisplayListener? = null
 

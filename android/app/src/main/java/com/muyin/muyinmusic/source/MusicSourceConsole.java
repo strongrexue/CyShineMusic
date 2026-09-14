@@ -1,4 +1,4 @@
-package com.cyshine.music.source;
+package com.muyin.muyinmusic.source;
 
 import com.whl.quickjs.wrapper.QuickJSContext;
 

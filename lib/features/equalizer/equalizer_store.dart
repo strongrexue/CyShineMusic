@@ -45,7 +45,7 @@ enum EqualizerFilterType {
       'highshelf' => highShelf,
       'lowpass' => lowPass,
       'highpass' => highPass,
-      // Early CyShineMusic builds exposed filters that Salt does not use.
+      // Early MuyinMusic builds exposed filters that Salt does not use.
       _ => peaking,
     };
   }
@@ -281,7 +281,7 @@ class EqualizerSettings {
               .where((candidate) => candidate.id == presetId)
               .firstOrNull
               ?.label ??
-          'CyShineMusic',
+          'MuyinMusic',
       inputGainDb: inputGainDb,
       outputGainDb: outputGainDb,
       bands: bands,
