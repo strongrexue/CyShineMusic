@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/enums.dart';
+import '../../core/models/online_collection_kind.dart';
 import '../../core/services/embedded_artwork_cache.dart';
 import '../../core/services/tagger.dart';
 import '../../core/storage/settings_store.dart';
@@ -21,12 +23,12 @@ import '../player/player_controller.dart';
 import '../playlists/playlist_browser_sheet.dart';
 import '../playlists/playlist_models.dart';
 import '../playlists/playlist_store.dart';
-import '../playlists/widgets/playlist_artwork.dart';
 import '../search/widgets/quality_picker_sheet.dart';
 import '../search/widgets/search_result_tile.dart';
 import '../shell/shell_toolbar_visibility.dart';
 import 'liked_songs_provider.dart';
 import 'local_song_scan_cache.dart';
+import 'saved_collections_provider.dart';
 import 'scanned_song_file.dart';
 import 'song_search.dart';
 import 'songs_toolbar_state.dart';
@@ -838,7 +840,6 @@ class _SongsPageState extends ConsumerState<SongsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final playlists = ref.watch(localPlaylistsProvider);
     final history = ref.watch(downloadHistoryProvider);
     final allSongs = _songs(history);
     final songs = widget.searchMode
@@ -878,7 +879,6 @@ class _SongsPageState extends ConsumerState<SongsPage> {
           )
         : _buildCollectionView(
             songs: allSongs,
-            playlists: playlists,
             scanning: scanning,
             playbackIdentity: playbackIdentity,
             artworkVersionByPath: artworkVersionByPath,
@@ -908,7 +908,6 @@ class _SongsPageState extends ConsumerState<SongsPage> {
 
   Widget _buildCollectionView({
     required List<DownloadHistoryEntry> songs,
-    required List<LocalPlaylist> playlists,
     required bool scanning,
     required ({
       DownloadHistoryEntry? queueEntry,
@@ -941,30 +940,7 @@ class _SongsPageState extends ConsumerState<SongsPage> {
               playbackIdentity: playbackIdentity,
               artworkVersionByPath: artworkVersionByPath,
             ),
-            _CollectionTab.playlists => [
-              if (playlists.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: EmptyPlaylists(
-                    onManage: () => context.go('/playlists'),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 104),
-                  sliver: SliverList.separated(
-                    itemCount: playlists.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      return _PlaylistTile(
-                        playlist: playlists[index],
-                        onTap: () =>
-                            context.go('/playlists/${playlists[index].id}'),
-                      );
-                    },
-                  ),
-                ),
-            ],
+            _CollectionTab.playlists => _buildSavedCollectionsSlivers(),
           },
         ],
       ),
@@ -1030,6 +1006,42 @@ class _SongsPageState extends ConsumerState<SongsPage> {
     await ref
         .read(playerControllerProvider.notifier)
         .playFromPlaylistQueue(entry, queue);
+  }
+
+  List<Widget> _buildSavedCollectionsSlivers() {
+    final saved = ref.watch(savedCollectionsProvider);
+    if (saved.isEmpty) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: EmptySavedCollections(),
+        ),
+      ];
+    }
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(14, 2, 14, 104),
+        sliver: SliverList.separated(
+          itemCount: saved.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            final item = saved[index];
+            return _SavedCollectionTile(
+              collection: item,
+              onTap: () {
+                final path = item.kind == OnlineCollectionKind.leaderboard
+                    ? '/discover/leaderboards/${item.source.code}/${item.id}'
+                    : '/discover/playlists/${item.source.code}/${item.id}';
+                context.push(path);
+              },
+              onToggle: () => ref
+                  .read(savedCollectionsProvider.notifier)
+                  .toggle(item),
+            );
+          },
+        ),
+      ),
+    ];
   }
 
   List<Widget> _buildLocalSlivers({
@@ -1277,11 +1289,16 @@ class _CollectionTabPill extends StatelessWidget {
   }
 }
 
-class _PlaylistTile extends StatelessWidget {
-  const _PlaylistTile({required this.playlist, required this.onTap});
+class _SavedCollectionTile extends StatelessWidget {
+  const _SavedCollectionTile({
+    required this.collection,
+    required this.onTap,
+    required this.onToggle,
+  });
 
-  final LocalPlaylist playlist;
+  final SavedCollection collection;
   final VoidCallback onTap;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -1301,33 +1318,139 @@ class _PlaylistTile extends StatelessWidget {
         child: ListTile(
           onTap: onTap,
           minTileHeight: 72,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-          leading: PlaylistCover(
-            playlist: playlist,
-            size: 48,
-            radius: 14,
-            placeholder: Container(
+          contentPadding: const EdgeInsets.only(left: 12),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
               width: 48,
               height: 48,
-              color: scheme.secondaryContainer,
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.queue_music_rounded,
-                color: scheme.onSecondaryContainer,
-                size: 24,
-              ),
+              child: collection.cover != null && collection.cover!.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: collection.cover!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => Container(
+                        color: scheme.secondaryContainer,
+                        child: Icon(
+                          collection.kind == OnlineCollectionKind.leaderboard
+                              ? Icons.leaderboard_rounded
+                              : Icons.queue_music_rounded,
+                          color: scheme.onSecondaryContainer,
+                          size: 24,
+                        ),
+                      ),
+                      errorWidget: (_, _, _) => Container(
+                        color: scheme.secondaryContainer,
+                        child: Icon(
+                          collection.kind == OnlineCollectionKind.leaderboard
+                              ? Icons.leaderboard_rounded
+                              : Icons.queue_music_rounded,
+                          color: scheme.onSecondaryContainer,
+                          size: 24,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: scheme.secondaryContainer,
+                      child: Icon(
+                        collection.kind == OnlineCollectionKind.leaderboard
+                            ? Icons.leaderboard_rounded
+                            : Icons.queue_music_rounded,
+                        color: scheme.onSecondaryContainer,
+                        size: 24,
+                      ),
+                    ),
             ),
           ),
           title: Text(
-            playlist.name,
+            collection.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          subtitle: Text('${playlist.tracks.length} 首歌曲'),
-          trailing: Icon(
-            Icons.chevron_right_rounded,
-            color: scheme.onSurfaceVariant,
+          subtitle: Text(
+            '${collection.source.label}·${collection.kind == OnlineCollectionKind.leaderboard ? '榜单' : '歌单'}'
+            '${collection.subtitle != null && collection.subtitle!.isNotEmpty ? ' · ${collection.subtitle}' : ''}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: '取消收藏',
+                onPressed: onToggle,
+                icon: Icon(
+                  Icons.favorite_rounded,
+                  color: scheme.primary,
+                  size: 20,
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: scheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EmptySavedCollections extends StatelessWidget {
+  const EmptySavedCollections({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 108),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 330),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Icon(
+                  Icons.favorite_border_rounded,
+                  size: 40,
+                  color: scheme.onSecondaryContainer,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '还没有收藏的歌单/榜单',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  letterSpacing: -0.15,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                '在发现页点红心收藏歌单或榜单',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+              ),
+            ],
           ),
         ),
       ),

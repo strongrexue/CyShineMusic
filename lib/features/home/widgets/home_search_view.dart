@@ -28,7 +28,7 @@ import '../../search/widgets/source_filter_chips.dart';
 
 /// 首页的完整搜索视图：搜索建议 + 音源标签 + 分页结果 + 「第 X 页」悬浮按钮。
 /// 交互移植自源项目的发现页搜索；返回箭头 / 清除按钮通过 [onExit] 回到首页
-/// 默认态（最近播放 / 我的收藏）。
+/// 默认态（最近播放 / 喜欢的歌）。
 class HomeSearchView extends ConsumerStatefulWidget {
   const HomeSearchView({required this.onExit, super.key});
 

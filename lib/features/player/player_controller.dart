@@ -20,6 +20,7 @@ import '../../core/storage/settings_store.dart';
 import '../../core/ui/cover_image_source.dart';
 import '../downloads/download_history_store.dart';
 import '../equalizer/equalizer_store.dart';
+import '../songs/play_history_provider.dart';
 import 'bluetooth_lyric_metadata.dart';
 import 'lyric_parser.dart';
 import 'player_audio_handler.dart';
@@ -202,6 +203,7 @@ class PlayerController extends StateNotifier<PlayerState>
           _ref.read(settingsProvider).onlinePlaybackQuality,
         );
     _currentMusic = music;
+    _scheduleAddHistory(music);
     _logPlayback(
       'load_start kind=remote music=${music.source.code}:${music.id} '
       'requestedQuality=${selectedQuality.code} '
@@ -528,6 +530,13 @@ class PlayerController extends StateNotifier<PlayerState>
   String _singleLine(String value) =>
       value.replaceAll(RegExp(r'[\r\n]+'), ' ').replaceAll('"', "'").trim();
 
+  /// 推迟写播放历史到下一帧，避免在 Provider build 阶段修改其他 Provider。
+  void _scheduleAddHistory(MusicInfo music) {
+    Future.microtask(
+      () => _ref.read(playHistoryProvider.notifier).add(music),
+    );
+  }
+
   Future<void> _recoverStalledPlayback(
     String trackId,
     Object? requestToken,
@@ -758,6 +767,9 @@ class PlayerController extends StateNotifier<PlayerState>
     _pausedBySleepTimer = false;
     final pauseGeneration = _sleepTimerPauseGeneration;
     _currentMusic = fallbackMusic;
+    if (fallbackMusic != null) {
+      _scheduleAddHistory(fallbackMusic);
+    }
     _currentQuality = Quality.tryFromCode(track.qualityLabel);
     _logPlayback(
       'load_start kind=local source=${_singleLine(track.sourceLabel)} '

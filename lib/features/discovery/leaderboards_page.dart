@@ -7,6 +7,7 @@ import '../../core/models/leaderboard_info.dart';
 import '../../core/models/online_collection_kind.dart';
 import '../../core/ui/app_refresh_indicator.dart';
 import '../../core/ui/container_transform.dart';
+import '../songs/saved_collections_provider.dart';
 import '../shell/widgets/shell_header.dart';
 import 'discovery_controller.dart';
 import 'widgets/discovery_placeholders.dart';
@@ -157,6 +158,13 @@ class _LeaderboardGridCard extends ConsumerWidget {
         ref.watch(leaderboardArtworkProvider(identity)) ?? board.coverUrl;
     final resolved = (preview ?? board).copyWith(coverUrl: coverUrl);
     const radius = BorderRadius.all(Radius.circular(14));
+    final dedupKey =
+        '${board.source.code}:${OnlineCollectionKind.leaderboard.name}:${board.boardId}';
+    final saved = ref.watch(
+      savedCollectionsProvider.select(
+        (entries) => entries.any((e) => e.dedupKey == dedupKey),
+      ),
+    );
     return Card(
       key: ValueKey('leaderboard-card-${board.key}'),
       margin: EdgeInsets.zero,
@@ -184,25 +192,72 @@ class _LeaderboardGridCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: Hero(
-                tag: onlinePlaylistArtworkHeroTag(
-                  board.source,
-                  board.boardId,
-                  kind: OnlineCollectionKind.leaderboard,
-                ),
-                transitionOnUserGestures: true,
-                createRectTween: containerTransformHeroRectTween,
-                child: HeroArtworkShape(
-                  // 封面贴着卡片顶部，只有上方两角跟随卡片圆角。
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(14),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: onlinePlaylistArtworkHeroTag(
+                      board.source,
+                      board.boardId,
+                      kind: OnlineCollectionKind.leaderboard,
+                    ),
+                    transitionOnUserGestures: true,
+                    createRectTween: containerTransformHeroRectTween,
+                    child: HeroArtworkShape(
+                      // 封面贴着卡片顶部，只有上方两角跟随卡片圆角。
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(14),
+                      ),
+                      child: LeaderboardArtwork(
+                        name: board.name,
+                        index: index,
+                        coverUrl: coverUrl,
+                      ),
+                    ),
                   ),
-                  child: LeaderboardArtwork(
-                    name: board.name,
-                    index: index,
-                    coverUrl: coverUrl,
+                  Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.32),
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => ref
+                            .read(savedCollectionsProvider.notifier)
+                            .toggle(
+                              SavedCollection(
+                                kind: OnlineCollectionKind.leaderboard,
+                                id: board.boardId,
+                                source: board.source,
+                                title: board.name,
+                                cover: coverUrl,
+                                subtitle:
+                                    board.updateFrequency ?? '实时更新',
+                                savedAt:
+                                    DateTime.now().millisecondsSinceEpoch,
+                                payload: {
+                                  'source': board.source.code,
+                                  'id': board.boardId,
+                                },
+                              ),
+                            ),
+                        customBorder: const CircleBorder(),
+                        child: SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: Icon(
+                            saved
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: saved ? scheme.primary : Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
             Padding(

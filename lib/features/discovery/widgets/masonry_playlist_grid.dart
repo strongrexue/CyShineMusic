@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/models/online_collection_kind.dart';
 import '../../../core/models/playlist_summary.dart';
 import '../../../core/ui/container_transform.dart';
+import '../../songs/saved_collections_provider.dart';
 import '../discovery_controller.dart';
 import 'discovery_helpers.dart';
 import 'discovery_playlist_cover.dart';
@@ -74,7 +77,7 @@ class _MasonryEntry {
   final double coverRatio;
 }
 
-class _PlaylistDiscoveryCard extends StatelessWidget {
+class _PlaylistDiscoveryCard extends ConsumerWidget {
   const _PlaylistDiscoveryCard({
     required this.summary,
     required this.coverRatio,
@@ -84,9 +87,16 @@ class _PlaylistDiscoveryCard extends StatelessWidget {
   final double coverRatio;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final path = discoveryPlaylistDetailPath(summary);
+    final dedupKey =
+        '${summary.source.code}:${OnlineCollectionKind.playlist.name}:${summary.id}';
+    final saved = ref.watch(
+      savedCollectionsProvider.select(
+        (entries) => entries.any((e) => e.dedupKey == dedupKey),
+      ),
+    );
     const radius = BorderRadius.all(Radius.circular(8));
     // 详情页从这张卡片的矩形展开（容器变换），封面 Hero 沿同一条曲线飞到
     // 头图；起点必须在 push 之前、卡片还在屏幕上时采集。
@@ -120,26 +130,60 @@ class _PlaylistDiscoveryCard extends StatelessWidget {
           );
         },
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: coverRatio,
-              child: Hero(
-                tag: onlinePlaylistArtworkHeroTag(summary.source, summary.id),
-                transitionOnUserGestures: true,
-                createRectTween: containerTransformHeroRectTween,
-                child: HeroArtworkShape(
-                  // 封面贴着卡片顶部，只有上方两角跟随卡片圆角。
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(8),
-                  ),
-                  child: DiscoveryPlaylistCover(
-                    url: summary.coverUrl,
-                    size: 36,
-                  ),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: coverRatio,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Hero(
+                      tag: onlinePlaylistArtworkHeroTag(
+                        summary.source,
+                        summary.id,
+                      ),
+                      transitionOnUserGestures: true,
+                      createRectTween: containerTransformHeroRectTween,
+                      child: HeroArtworkShape(
+                        // 封面贴着卡片顶部，只有上方两角跟随卡片圆角。
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                        ),
+                        child: DiscoveryPlaylistCover(
+                          url: summary.coverUrl,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: _CollectionHeartButton(
+                        saved: saved,
+                        onToggle: () => ref
+                            .read(savedCollectionsProvider.notifier)
+                            .toggle(
+                              SavedCollection(
+                                kind: OnlineCollectionKind.playlist,
+                                id: summary.id,
+                                source: summary.source,
+                                title: summary.name,
+                                cover: summary.coverUrl,
+                                subtitle: summary.creator ??
+                                    '${summary.source.label}精选',
+                                savedAt:
+                                    DateTime.now().millisecondsSinceEpoch,
+                                payload: {
+                                  'source': summary.source.code,
+                                  'id': summary.id,
+                                },
+                              ),
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
               child: Column(
@@ -201,4 +245,38 @@ String _compactCount(int count) {
     return '${(count / 10000).toStringAsFixed(count >= 100000 ? 0 : 1)}万';
   }
   return '$count';
+}
+
+/// 发现页歌单/榜单卡片右上角的红心按钮。半透明圆形背景确保在封面上可读。
+class _CollectionHeartButton extends StatelessWidget {
+  const _CollectionHeartButton({
+    required this.saved,
+    required this.onToggle,
+  });
+
+  final bool saved;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.black.withValues(alpha: 0.32),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onToggle,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: Icon(
+            saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            color: saved ? scheme.primary : Colors.white,
+            size: 16,
+          ),
+        ),
+      ),
+    );
+  }
 }

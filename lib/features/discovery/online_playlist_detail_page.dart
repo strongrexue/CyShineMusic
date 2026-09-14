@@ -20,13 +20,13 @@ import '../downloads/download_progress.dart';
 import '../music_sources/music_source_action_guard.dart';
 import '../player/player_controller.dart';
 import '../playlists/playlist_models.dart';
-import '../playlists/playlist_store.dart';
 import '../playlists/widgets/immersive_playlist_chrome.dart';
 import '../playlists/widgets/playlist_detail_actions.dart';
 import '../playlists/widgets/playlist_wide_layout.dart';
 import '../search/widgets/quality_picker_sheet.dart';
 import '../search/widgets/search_result_tile.dart';
 import '../songs/liked_songs_provider.dart';
+import '../songs/saved_collections_provider.dart';
 import 'discovery_controller.dart';
 
 class OnlinePlaylistDetailPage extends ConsumerStatefulWidget {
@@ -55,8 +55,6 @@ class _OnlinePlaylistDetailPageState
   int _trackLimit = onlinePlaylistDetailInitialTrackLimit;
   PlaylistInfo? _lastPlaylist;
   PlaylistSummary? _summary;
-  bool _saving = false;
-  bool _removingFavorite = false;
   final ScrollController _scrollController = ScrollController();
 
   OnlinePlaylistIdentity get _identity =>
@@ -98,8 +96,6 @@ class _OnlinePlaylistDetailPageState
       _summary =
           widget.summary ??
           ref.read(onlinePlaylistSummaryCacheProvider)[_identity];
-      _saving = false;
-      _removingFavorite = false;
     } else if (widget.summary != null) {
       _summary = widget.summary;
     }
@@ -184,9 +180,12 @@ class _OnlinePlaylistDetailPageState
     bool loadingMore = false,
     String? loadMoreError,
   }) {
-    final local = _findSavedPlaylist(
-      ref.watch(localPlaylistsProvider),
-      playlist,
+    final dedupKey =
+        '${widget.source.code}:${widget.kind.name}:${widget.playlistId}';
+    final saved = ref.watch(
+      savedCollectionsProvider.select(
+        (entries) => entries.any((e) => e.dedupKey == dedupKey),
+      ),
     );
     final queue = _onlinePlaylistQueue(playlist);
 
@@ -224,14 +223,12 @@ class _OnlinePlaylistDetailPageState
               onPlay: queue.isEmpty
                   ? null
                   : () => _playQueue(playlist, queue.first),
-              onFavorite: _saving
-                  ? null
-                  : () => _toggleFavorite(playlist, local),
-              saving: _saving,
-              removingFavorite: _removingFavorite,
-              saved: local != null,
+              onFavorite: () => _toggleSavedCollection(playlist, saved),
+              saving: false,
+              removingFavorite: false,
+              saved: saved,
               favoriteLabel: widget.kind == OnlineCollectionKind.leaderboard
-                  ? (local != null ? '已收藏' : '收藏榜单')
+                  ? (saved ? '已收藏' : '收藏榜单')
                   : null,
               padding: padding,
             );
@@ -421,55 +418,26 @@ class _OnlinePlaylistDetailPageState
     await playback;
   }
 
-  Future<void> _toggleFavorite(
-    PlaylistInfo playlist,
-    LocalPlaylist? savedPlaylist,
-  ) async {
-    if (_saving) return;
-    final removing = savedPlaylist != null;
-    setState(() {
-      _saving = true;
-      _removingFavorite = removing;
-    });
-    try {
-      final notifier = ref.read(localPlaylistsProvider.notifier);
-      if (savedPlaylist == null) {
-        final api = ref.read(musicApiProvider);
-        final loaded = widget.kind == OnlineCollectionKind.leaderboard
-            ? await api.getLeaderboard(
-                source: playlist.source,
-                boardId: playlist.id,
-              )
-            : await api.parsePlaylist(
-                input: playlist.id,
-                source: playlist.source,
-              );
-        final fullPlaylist = _withDiscoveryArtwork(loaded);
-        await notifier.importOnline(fullPlaylist);
-      } else {
-        await notifier.delete(savedPlaylist.id);
-      }
-      if (!mounted) return;
-      showAppToast(
-        context,
-        removing ? '已取消收藏' : '已完整收藏到我的歌单',
-        type: AppToastType.success,
-      );
-    } catch (error) {
-      if (!mounted) return;
-      showAppToast(
-        context,
-        '${removing ? '取消收藏' : '收藏'}失败：$error',
-        type: AppToastType.error,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-          _removingFavorite = false;
-        });
-      }
-    }
+  void _toggleSavedCollection(PlaylistInfo playlist, bool currentlySaved) {
+    final collection = SavedCollection(
+      kind: widget.kind,
+      id: widget.playlistId,
+      source: widget.source,
+      title: _summary?.name ?? playlist.name,
+      cover: _summary?.coverUrl ?? playlist.coverUrl,
+      subtitle: _summary?.creator ?? playlist.creator,
+      savedAt: DateTime.now().millisecondsSinceEpoch,
+      payload: {
+        'source': widget.source.code,
+        'id': widget.playlistId,
+      },
+    );
+    ref.read(savedCollectionsProvider.notifier).toggle(collection);
+    showAppToast(
+      context,
+      currentlySaved ? '已取消收藏' : '已收藏',
+      type: AppToastType.success,
+    );
   }
 
   void _requestMoreTracksIfNeeded(PlaylistInfo playlist, int index) {
@@ -1043,19 +1011,6 @@ Future<void> _expandOnlinePlaylistQueue({
       'expand online playlist queue failed: $error',
     );
   }
-}
-
-LocalPlaylist? _findSavedPlaylist(
-  List<LocalPlaylist> playlists,
-  PlaylistInfo online,
-) {
-  for (final playlist in playlists) {
-    if (playlist.originSourceCode == online.source.code &&
-        playlist.originPlaylistId == online.id) {
-      return playlist;
-    }
-  }
-  return null;
 }
 
 String _compactCount(int count) {
