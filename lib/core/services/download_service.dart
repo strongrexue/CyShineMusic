@@ -77,7 +77,7 @@ class DownloadService {
   DownloadService(this._ref);
 
   final Ref _ref;
-  static const _mediaScanChannel = MethodChannel('cy_shine_music/media_scan');
+  static const _mediaScanChannel = MethodChannel('muyin_music/media_scan');
   static const int batchConcurrency = 3;
 
   final Set<String> _batchDownloadKeys = {};
@@ -519,7 +519,7 @@ class DownloadService {
     } catch (e) {
       log('destDir FAILED ${dir.path}: $e; falling back to app-private');
       final fallback = await getApplicationDocumentsDirectory();
-      final fb = Directory(p.join(fallback.path, 'CyShineMusic'));
+      final fb = Directory(p.join(fallback.path, 'MuyinMusic'));
       if (!fb.existsSync()) fb.createSync(recursive: true);
       return fb;
     }

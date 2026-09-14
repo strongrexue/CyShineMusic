@@ -36,7 +36,7 @@ Future<void> main() async {
         sharedPreferencesProvider.overrideWithValue(prefs),
         playerAudioHandlerProvider.overrideWithValue(audioHandler),
       ],
-      child: const CyShineMusicApp(),
+      child: const MuyinMusicApp(),
     ),
   );
 }

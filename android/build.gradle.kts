@@ -20,7 +20,7 @@ subprojects {
         if (project.hasProperty("android")) {
             val android = project.extensions.getByName("android") as com.android.build.gradle.BaseExtension
             if (android.namespace == null) {
-                android.namespace = "com.cyshine.${project.name.replace("-", "_")}"
+                android.namespace = "com.muyin.${project.name.replace("-", "_")}"
             }
         }
     }

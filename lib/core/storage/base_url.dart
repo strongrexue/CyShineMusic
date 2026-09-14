@@ -6,7 +6,7 @@ library;
 
 const String kPrimaryBaseUrl = 'https://example.com';
 const String kDefaultBaseUrl = kPrimaryBaseUrl;
-const String kDefaultDownloadDir = '/storage/emulated/0/Music/CyShineMusic';
+const String kDefaultDownloadDir = '/storage/emulated/0/Music/MuyinMusic';
 const String _kRetiredPrimaryBaseUrl = 'https://legacy.example.com';
 
 String normalizeBaseUrl(String value) {

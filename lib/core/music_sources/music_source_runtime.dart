@@ -28,7 +28,7 @@ class MusicSourceRuntime {
     _channel.setMethodCallHandler(_handleNativeEvent);
   }
 
-  static const String _channelName = 'cy_shine_music/music_source_runtime';
+  static const String _channelName = 'muyin_music/music_source_runtime';
   final Dio _dio;
   final MethodChannel _channel;
   final Map<String, CancelToken> _httpRequests = {};

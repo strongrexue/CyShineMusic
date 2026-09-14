@@ -18,7 +18,6 @@ import 'shell_route_utils.dart';
 import 'shell_toolbar_visibility.dart';
 import 'tab_location_memory.dart';
 import 'widgets/bottom_toolbar.dart';
-import 'widgets/discovery_category_fab.dart';
 import 'widgets/mini_player_bar.dart';
 import 'widgets/search_paging_fab.dart';
 import 'widgets/shell_header.dart';
@@ -663,12 +662,7 @@ class _AppShellState extends ConsumerState<AppShell>
               if (widget.location == '/discover')
                 Positioned.fill(
                   key: ValueKey('shell-fab'),
-                  child: const Stack(
-                    children: [
-                      DiscoveryCategoryFabLayer(),
-                      SearchPagingFabLayer(),
-                    ],
-                  ),
+                  child: const SearchPagingFabLayer(),
                 ),
             ],
           ),
@@ -838,7 +832,7 @@ String _shellContentAnimationKey(String location) {
   return isDiscoveryLocation(location) ? '/discover' : location;
 }
 
-const _appTaskChannel = MethodChannel('cy_shine_music/app_task');
+const _appTaskChannel = MethodChannel('muyin_music/app_task');
 
 Future<void> _moveAppTaskToBack() async {
   try {

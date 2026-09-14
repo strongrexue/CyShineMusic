@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/music_api.dart';
 import '../../core/models/enums.dart';
+import '../../core/models/playlist_category.dart';
 import '../../core/models/playlist_summary.dart';
 import '../../core/ui/app_refresh_indicator.dart';
 import '../../theme/app_motion.dart';
@@ -109,6 +110,7 @@ class _DiscoveryContentState extends ConsumerState<DiscoveryContent> {
     return Column(
       children: [
         DiscoverySourceSelector(pageController: _pageController),
+        const _DiscoveryCategoryBar(),
         const SizedBox(height: 6),
         Expanded(
           child: PageView.builder(
@@ -314,6 +316,75 @@ class _DiscoveryListState extends State<_DiscoveryList> {
           ),
           ..._buildFeaturedSection(),
         ],
+      ),
+    );
+  }
+}
+
+/// 平台源下方的歌单排序平铺栏（原右下角悬浮菜单迁移至此）。
+/// 排序数据、默认项与刷新逻辑与原 FAB 完全一致；仅一个选项时隐藏。
+class _DiscoveryCategoryBar extends ConsumerWidget {
+  const _DiscoveryCategoryBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final source = ref.watch(selectedDiscoverySourceProvider);
+    final categories = playlistCatalogCategoriesFor(source);
+    if (categories.length <= 1) return const SizedBox.shrink();
+    final selectedId = ref.watch(selectedDiscoveryCategoryProvider(source));
+    final scheme = Theme.of(context).colorScheme;
+    final outline = BorderSide(
+      color: scheme.outlineVariant.withValues(alpha: 0.5),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 2, bottom: 2),
+      child: SizedBox(
+        height: 36,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          itemCount: categories.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            final selected = category.id == selectedId;
+            return Center(
+              child: Material(
+                color: selected ? scheme.secondaryContainer : Colors.transparent,
+                shape: selected
+                    ? const StadiumBorder()
+                    : StadiumBorder(side: outline),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: selected
+                      ? null
+                      : () => ref
+                                .read(
+                                  selectedDiscoveryCategoryProvider(
+                                    source,
+                                  ).notifier,
+                                )
+                                .state = category.id,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      category.label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: selected
+                            ? scheme.onSecondaryContainer
+                            : scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

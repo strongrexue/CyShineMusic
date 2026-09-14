@@ -27,8 +27,8 @@ require(appChannel == "main" || appChannel == "dev") {
 }
 
 val isDevChannel = appChannel == "dev"
-val appId = if (isDevChannel) "com.cyshine.music.dev" else "com.cyshine.music"
-val appLabel = if (isDevChannel) "栖弦dev" else "栖弦"
+val appId = if (isDevChannel) "com.muyin.muyinmusic.dev" else "com.muyin.muyinmusic"
+val appLabel = if (isDevChannel) "沐音dev" else "沐音"
 
 val targetPlatformToAbi = mapOf(
     "android-arm" to "armeabi-v7a",
@@ -63,7 +63,7 @@ val releaseSigningReady = signingStoreFile?.isFile == true &&
     !signingKeyPassword.isNullOrBlank()
 
 android {
-    namespace = "com.cyshine.music"
+    namespace = "com.muyin.muyinmusic"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

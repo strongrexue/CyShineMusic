@@ -1,4 +1,4 @@
-package com.cyshine.music.source;
+package com.muyin.muyinmusic.source;
 
 import android.content.Context;
 import android.os.Handler;
@@ -27,7 +27,7 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 
 public final class MusicSourceRuntimeBridge implements MethodChannel.MethodCallHandler {
-    private static final String CHANNEL = "cy_shine_music/music_source_runtime";
+    private static final String CHANNEL = "muyin_music/music_source_runtime";
     private static final int MAX_SCRIPT_LENGTH = 2 * 1024 * 1024;
 
     private final Context context;

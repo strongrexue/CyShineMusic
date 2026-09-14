@@ -601,7 +601,7 @@ class _EqualizerPageState extends ConsumerState<EqualizerPage> {
     try {
       var path = await FilePicker.platform.saveFile(
         dialogTitle: '导出均衡器配置',
-        fileName: 'CyShineMusic.speq',
+        fileName: 'MuyinMusic.speq',
         type: FileType.custom,
         allowedExtensions: const ['speq'],
       );

@@ -7,7 +7,7 @@ import '../api/dio_factory.dart';
 import '../storage/settings_store.dart';
 
 const _githubApiBaseUrl = 'https://api.github.com';
-const _latestReleasePath = '/repos/KevinllBin/CyShineMusic/releases/latest';
+const _latestReleasePath = '/repos/KevinllBin/MuyinMusic/releases/latest';
 
 class AppRelease {
   const AppRelease({
@@ -103,7 +103,7 @@ Dio _createGithubDio({NetworkAdapterMode? adapterMode}) {
       headers: const {
         'Accept': 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'CyShineMusic-Android',
+        'User-Agent': 'MuyinMusic-Android',
       },
     ),
     adapterMode: adapterMode,
@@ -114,5 +114,5 @@ bool _isGithubReleaseUri(Uri? uri) {
   if (uri == null || uri.scheme != 'https' || uri.host != 'github.com') {
     return false;
   }
-  return uri.path.startsWith('/KevinllBin/CyShineMusic/releases/');
+  return uri.path.startsWith('/KevinllBin/MuyinMusic/releases/');
 }

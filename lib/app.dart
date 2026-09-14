@@ -27,14 +27,14 @@ import 'theme/app_theme.dart';
 import 'theme/dynamic_color_scheme.dart';
 import 'theme/dynamic_color_status.dart';
 
-class CyShineMusicApp extends ConsumerStatefulWidget {
-  const CyShineMusicApp({super.key});
+class MuyinMusicApp extends ConsumerStatefulWidget {
+  const MuyinMusicApp({super.key});
 
   @override
-  ConsumerState<CyShineMusicApp> createState() => _CyShineMusicAppState();
+  ConsumerState<MuyinMusicApp> createState() => _MuyinMusicAppState();
 }
 
-class _CyShineMusicAppState extends ConsumerState<CyShineMusicApp>
+class _MuyinMusicAppState extends ConsumerState<MuyinMusicApp>
     with WidgetsBindingObserver {
   Future<CorePalette?>? _corePaletteFuture;
   String? _lastLoggedScheme;
@@ -213,7 +213,7 @@ class _CyShineMusicAppState extends ConsumerState<CyShineMusicApp>
             );
 
             return MaterialApp.router(
-              title: '栖弦',
+              title: '沐音',
               debugShowCheckedModeBanner: false,
               themeAnimationDuration: AppMotion.long,
               themeAnimationCurve: AppMotion.emphasized,
